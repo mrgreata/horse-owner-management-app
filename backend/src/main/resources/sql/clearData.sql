@@ -1,0 +1,2 @@
+DELETE FROM horse;
+DELETE FROM owner; 
