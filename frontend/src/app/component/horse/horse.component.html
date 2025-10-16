@@ -104,10 +104,10 @@
       @for (horse of horses; track horse.id) {
         <tr class="center-td">
           <td>{{ horse.name }}</td>
-          <td>{{ horse.description }}</td>
+          <td>{{ horse.description || '—' }}</td>
           <td>{{ dateOfBirthAsLocaleDate(horse) }}</td>
           <td>{{ horse.sex === 'FEMALE' ? 'Female' : 'Male' }}</td>
-          <td>{{ ownerName(horse.owner) }}</td>
+          <td>{{ ownerName(horse.owner) || '—' }}</td>
           <td>
             <div class="btn-group">
               <a class="btn btn-sm responsive-info-button"

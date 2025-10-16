@@ -83,4 +83,68 @@ public class HorseEndpointTest extends TestBase {
             .get("/asdf123")
         ).andExpect(status().isNotFound());
   }
+
+  @Test
+  public void createHorse_returns201_andBody() throws Exception {
+    var json = """
+    {
+      "name":"Bella",
+      "description":"Test",
+      "dateOfBirth":"2020-05-05",
+      "sex":"FEMALE",
+      "ownerId": null
+    }
+        """;
+
+    var mvcResult = mockMvc.perform(
+                    MockMvcRequestBuilders.post("/horses")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json)
+                            .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+    var body = mvcResult.getResponse().getContentAsByteArray();
+    var dto = objectMapper.readValue(body, at.ac.tuwien.sepr.assignment.individual.dto.HorseDetailDto.class);
+
+    assertAll(
+            () -> assertThat(dto.id()).isNotNull(),
+            () -> assertThat(dto.name()).isEqualTo("Bella"),
+            () -> assertThat(dto.description()).isEqualTo("Test"),
+            () -> assertThat(dto.dateOfBirth().toString()).isEqualTo("2020-05-05"),
+            () -> assertThat(dto.sex().name()).isEqualTo("FEMALE"),
+            () -> assertThat(dto.owner()).isNull()
+    );
+  }
+
+  @Test
+  public void createHorse_invalid_returns422_withErrors() throws Exception {
+    var json = """
+    {
+      "name":"",
+      "description":"x",
+      "dateOfBirth":"2099-01-01",
+      "sex":null,
+      "ownerId": null
+    }
+        """;
+
+    var mvcResult = mockMvc.perform(
+                    MockMvcRequestBuilders.post("/horses")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json)
+                            .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isUnprocessableEntity())
+            .andReturn();
+
+    var node = objectMapper.readTree(mvcResult.getResponse().getContentAsByteArray());
+    assertAll(
+            () -> assertThat(node.get("message").asText()).isEqualTo("Invalid horse"),
+            () -> assertThat(node.get("errors").toString())
+                    .contains("name must not be empty")
+                    .contains("sex must not be null")
+                    .contains("dateOfBirth must not be in the future")
+    );
+  }
+
 }

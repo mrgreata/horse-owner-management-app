@@ -9,6 +9,9 @@ import at.ac.tuwien.sepr.assignment.individual.exception.NotFoundException;
 import at.ac.tuwien.sepr.assignment.individual.exception.ValidationException;
 import java.util.stream.Stream;
 
+import at.ac.tuwien.sepr.assignment.individual.dto.HorseCreateDto;
+
+
 /**
  * Service for working with horses.
  */
@@ -20,6 +23,8 @@ public interface HorseService {
    */
   Stream<HorseListDto> allHorses();
 
+  HorseDetailDto create(HorseCreateDto dto) throws ValidationException, ConflictException;
+
 
   /**
    * Updates the horse with the ID given in {@code horse}
@@ -27,7 +32,7 @@ public interface HorseService {
    * in the persistent data store.
    *
    * @param horse the horse to update
-   * @return he updated horse
+   * @return the updated horse
    * @throws NotFoundException if the horse with given ID does not exist in the persistent data store
    * @throws ValidationException if the update data given for the horse is in itself incorrect (description too long, no name, …)
    * @throws ConflictException if the update data given for the horse is in conflict the data currently in the system (owner does not exist, …)
@@ -45,5 +50,6 @@ public interface HorseService {
    * @throws NotFoundException if the horse with the given ID does not exist in the persistent data store
    */
   HorseDetailDto getById(long id) throws NotFoundException;
+
 
 }

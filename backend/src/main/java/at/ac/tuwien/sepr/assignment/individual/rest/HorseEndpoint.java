@@ -1,4 +1,6 @@
 package at.ac.tuwien.sepr.assignment.individual.rest;
+import java.util.List;
+import org.springframework.http.MediaType;
 
 import at.ac.tuwien.sepr.assignment.individual.dto.HorseDetailDto;
 import at.ac.tuwien.sepr.assignment.individual.dto.HorseListDto;
@@ -21,6 +23,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+import at.ac.tuwien.sepr.assignment.individual.dto.HorseCreateDto;
+import at.ac.tuwien.sepr.assignment.individual.dto.HorseDetailDto;
+import at.ac.tuwien.sepr.assignment.individual.exception.ValidationException;
+import at.ac.tuwien.sepr.assignment.individual.exception.ConflictException;
+
 
 /**
  * REST controller for managing horse-related operations.
@@ -46,14 +56,13 @@ public class HorseEndpoint {
    * @param searchParameters the parameters to filter the horse search
    * @return a stream of {@link HorseListDto} matching the search criteria
    */
-  @GetMapping
-  public Stream<HorseListDto> searchHorses(HorseSearchDto searchParameters) {
+  @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+  public java.util.List<HorseListDto> searchHorses(HorseSearchDto searchParameters) {
     LOG.info("GET " + BASE_PATH);
     LOG.debug("request parameters: {}", searchParameters);
-    // TODO We have the request params in the DTO now, but don't do anything with them yet…
-
-    return service.allHorses();
+    return service.allHorses().toList();
   }
+
 
   /**
    * Retrieves the details of a horse by its ID.
@@ -100,6 +109,28 @@ public class HorseEndpoint {
       throw new ResponseStatusException(status, e.getMessage(), e);
     }
   }
+
+  @PostMapping
+  @ResponseStatus(HttpStatus.CREATED)
+  public HorseDetailDto create(@RequestBody HorseCreateDto toCreate)
+          throws ValidationException, ConflictException {
+    LOG.info("POST " + BASE_PATH);
+    LOG.debug("Body of request:\n{}", toCreate);
+    return service.create(toCreate);
+  }
+
+  /*
+  @PostMapping(path = "/horses/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void uploadImage(
+          @PathVariable long id,
+          @RequestPart("file") MultipartFile file
+  ) throws NotFoundException, ValidationException {
+    LOG.info("POST /horses/{}/image ({} bytes, {})", id, file.getSize(), file.getContentType());
+    service.storeHorseImage(id, file); // siehe Service unten
+  }
+
+*/
 
 
   /**

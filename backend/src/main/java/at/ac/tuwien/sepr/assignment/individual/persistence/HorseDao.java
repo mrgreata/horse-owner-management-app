@@ -40,4 +40,16 @@ public interface HorseDao {
    */
   Horse getById(long id) throws NotFoundException;
 
+
+
+  /**
+   * Insert a new horse into the persistent data store.
+   *
+   * @param horse the horse to be inserted
+   * @return the inserted horse including it generated ID
+   */
+  Horse insert(Horse horse);
+
+  void updateImage(long id, String imagePath, String contentType);
+
 }

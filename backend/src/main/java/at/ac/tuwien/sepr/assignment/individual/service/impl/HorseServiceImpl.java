@@ -1,5 +1,6 @@
 package at.ac.tuwien.sepr.assignment.individual.service.impl;
 
+import at.ac.tuwien.sepr.assignment.individual.dto.HorseCreateDto;
 import at.ac.tuwien.sepr.assignment.individual.dto.HorseDetailDto;
 import at.ac.tuwien.sepr.assignment.individual.dto.HorseListDto;
 import at.ac.tuwien.sepr.assignment.individual.dto.HorseUpdateDto;
@@ -13,16 +14,22 @@ import at.ac.tuwien.sepr.assignment.individual.mapper.HorseMapper;
 import at.ac.tuwien.sepr.assignment.individual.persistence.HorseDao;
 import at.ac.tuwien.sepr.assignment.individual.service.HorseService;
 import at.ac.tuwien.sepr.assignment.individual.service.OwnerService;
+
 import java.lang.invoke.MethodHandles;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 
 /**
  * Implementation of {@link HorseService} for handling image storage and retrieval.
@@ -30,6 +37,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class HorseServiceImpl implements HorseService {
   private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+
   private final HorseDao dao;
   private final HorseMapper mapper;
   private final HorseValidator validator;
@@ -64,6 +72,80 @@ public class HorseServiceImpl implements HorseService {
     return horses.stream()
         .map(horse -> mapper.entityToListDto(horse, ownerMap));
   }
+
+  @Override
+  public HorseDetailDto create(HorseCreateDto dto) throws ValidationException, ConflictException {
+    LOG.trace("create({})", dto);
+    validator.validateForCreate(dto);
+
+    if (dto.ownerId() != null) {
+      try {
+        ownerService.getById(dto.ownerId());
+      } catch (NotFoundException e) {
+        throw new ConflictException(
+                "Owner does not exist",
+                List.of("ownerId %d does not exist".formatted(dto.ownerId()))
+        );
+      }
+    }
+
+    var entity = new Horse(
+            null,
+            dto.name(),
+            dto.description(),
+            dto.dateOfBirth(),
+            dto.sex(),
+            dto.ownerId(),
+            null,
+            null
+    );
+    var saved = dao.insert(entity);
+    return mapper.entityToDetailDto(saved, ownerMapForSingleId(saved.ownerId()));
+  }
+
+
+
+
+  /*
+  @Override
+  public void storeHorseImage(long horseId, MultipartFile file)
+          throws NotFoundException, ValidationException {
+
+    LOG.trace("storeHorseImage({}, file size={})", horseId, file == null ? null : file.getSize());
+
+    // 1) Existenz prüfen
+    dao.getById(horseId); // wirft 404, wenn nicht da
+
+    // 2) Validieren (einfach & ausreichend für US1)
+    if (file == null || file.isEmpty()) {
+      throw new ValidationException("Invalid image", List.of("image file must not be empty"));
+    }
+    var contentType = file.getContentType();
+    if (contentType == null || !(contentType.startsWith("image/"))) {
+      throw new ValidationException("Invalid image", List.of("unsupported content type: " + contentType));
+    }
+    // Optionale Größenbeschränkung (z.B. 5 MB)
+    if (file.getSize() > 5 * 1024 * 1024) {
+      throw new ValidationException("Invalid image", List.of("image too large"));
+    }
+
+    // 3) Zielverzeichnis aus config (application.yml) lesen
+    var uploadDir = Paths.get(storageProperties.getHorseImageDir()); // siehe unten
+    try {
+      Files.createDirectories(uploadDir);
+      var filename = horseId + "-" + UUID.randomUUID();
+      var target = uploadDir.resolve(filename);
+      try (var in = file.getInputStream()) {
+        Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+      }
+      // 4) DB-Felder aktualisieren (Pfad + Content-Type)
+      dao.updateImage(horseId, target.toString(), contentType);
+    } catch (IOException e) {
+      throw new FatalException("Storing image failed", e);
+    }
+  }
+
+*/
 
 
   @Override

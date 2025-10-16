@@ -15,6 +15,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+//import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
+
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.Statement;
+
 
 /**
  * JDBC implementation of {@link HorseDao} for interacting with the database.
@@ -33,22 +42,80 @@ public class HorseJdbcDao implements HorseDao {
           + " WHERE ID = :id";
 
   private static final String SQL_UPDATE =
-      "UPDATE " + TABLE_NAME
-          + """
-              SET name = :name,
-                  description = :description,
-                  date_of_birth = :date_of_birth,
-                  sex = :sex
-              WHERE id = :id
+      "UPDATE " + TABLE_NAME + """  
+          SET name = :name,
+              description = :description,                      
+              date_of_birth = :date_of_birth,                       
+              sex = :sex,                       
+              owner_id = :owner_id                       
+          WHERE id = :id                        
           """;
+
+  private static final String SQL_INSERT = """
+  INSERT INTO horse (name, description, date_of_birth, sex, owner_id, image_path, image_content_type)
+  VALUES (?, ?, ?, ?, ?, ?, ?)
+      """;
+
+
 
 
   private final JdbcClient jdbcClient;
+  private final JdbcTemplate jdbcTemplate;
 
-  @Autowired
+
+  public HorseJdbcDao(JdbcClient jdbcClient, JdbcTemplate jdbcTemplate) {
+    this.jdbcClient = jdbcClient;
+    this.jdbcTemplate = jdbcTemplate;
+  }
+
+  @Override
+  public Horse insert(Horse horse) {
+    LOG.trace("insert({})", horse);
+    KeyHolder keyHolder = new GeneratedKeyHolder();
+
+    jdbcTemplate.update(con -> {
+      PreparedStatement ps = con.prepareStatement(SQL_INSERT, Statement.RETURN_GENERATED_KEYS);
+      ps.setString(1, horse.name());
+      ps.setString(2, horse.description());
+      ps.setDate(3, Date.valueOf(horse.dateOfBirth()));
+      ps.setString(4, horse.sex().name());
+      if (horse.ownerId() == null) {
+        ps.setNull(5, java.sql.Types.BIGINT);
+      } else {
+        ps.setLong(5, horse.ownerId());
+      }
+      // Bild (optional)
+      if (horse.imagePath() == null) {
+        ps.setNull(6, java.sql.Types.VARCHAR);
+      } else {
+        ps.setString(6, horse.imagePath());
+      }
+      if (horse.imageContentType() == null) {
+        ps.setNull(7, java.sql.Types.VARCHAR);
+      } else {
+        ps.setString(7, horse.imageContentType());
+      }
+      return ps;
+    }, keyHolder);
+
+    long id = keyHolder.getKey().longValue();
+    return new Horse(
+            id,
+            horse.name(),
+            horse.description(),
+            horse.dateOfBirth(),
+            horse.sex(),
+            horse.ownerId(),
+            horse.imagePath(),
+            horse.imageContentType()
+    );
+  }
+
+
+  /*@Autowired
   public HorseJdbcDao(JdbcClient jdbcClient) {
     this.jdbcClient = jdbcClient;
-  }
+  } */
 
   @Override
   public List<Horse> getAll() {
@@ -83,39 +150,60 @@ public class HorseJdbcDao implements HorseDao {
   @Override
   public Horse update(HorseUpdateDto horse) throws NotFoundException {
     LOG.trace("update({})", horse);
-    int updated = jdbcClient
-        .sql(SQL_UPDATE)
-        .param("id", horse.id())
-        .param("name", horse.name())
-        .param("description", horse.description())
-        .param("date_of_birth", horse.dateOfBirth())
-        .param("sex", horse.sex().toString())
-        .param("owner_id", horse.ownerId())
-        .update();
+    int updated = jdbcClient.sql(SQL_UPDATE)
+            .param("id", horse.id())
+            .param("name", horse.name())
+            .param("description", horse.description())
+            .param("date_of_birth", horse.dateOfBirth())
+            .param("sex", horse.sex().toString())
+            .param("owner_id", horse.ownerId())
+            .update();
 
     if (updated == 0) {
-      throw new NotFoundException(
-          "Could not update horse with ID " + horse.id() + ", because it does not exist"
-      );
+      throw new NotFoundException("Could not update horse with ID " + horse.id() + ", because it does not exist");
     }
 
+    // existierende Bild-Felder beibehalten
+    var current = getById(horse.id());
     return new Horse(
-        horse.id(),
-        horse.name(),
-        horse.description(),
-        horse.dateOfBirth(),
-        horse.sex(),
-        horse.ownerId());
+            horse.id(),
+            horse.name(),
+            horse.description(),
+            horse.dateOfBirth(),
+            horse.sex(),
+            horse.ownerId(),
+            current.imagePath(),
+            current.imageContentType()
+    );
   }
+
 
 
   private Horse mapRow(ResultSet result, int rownum) throws SQLException {
     return new Horse(
-        result.getLong("id"),
-        result.getString("name"),
-        result.getString("description"),
-        result.getDate("date_of_birth").toLocalDate(),
-        Sex.valueOf(result.getString("sex")),
-        result.getObject("owner_id", Long.class));
+            result.getLong("id"),
+            result.getString("name"),
+            result.getString("description"),
+            result.getDate("date_of_birth").toLocalDate(),
+            Sex.valueOf(result.getString("sex")),
+            result.getObject("owner_id", Long.class),
+            result.getString("image_path"),
+            result.getString("image_content_type")
+    );
+  }
+
+
+  @Override
+  public void updateImage(long id, String imagePath, String contentType) {
+    jdbcClient.sql("""
+      UPDATE horse
+         SET image_path = :path,
+             image_content_type = :ctype
+       WHERE id = :id
+      """)
+            .param("path", imagePath)
+            .param("ctype", contentType)
+            .param("id", id)
+            .update();
   }
 }

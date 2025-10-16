@@ -11,6 +11,7 @@ import {ErrorFormatterService} from 'src/app/service/error-formatter.service';
 import {HorseService} from 'src/app/service/horse.service';
 import {OwnerService} from 'src/app/service/owner.service';
 import {formatIsoDate} from "../../../utils/date-helper";
+import {NgClass} from "@angular/common";
 
 export enum HorseCreateEditMode {
   create,
@@ -23,13 +24,14 @@ export enum HorseCreateEditMode {
   imports: [
     FormsModule,
     AutocompleteComponent,
-    FormsModule
+    FormsModule,
+    NgClass
   ],
   standalone: true,
   styleUrls: ['./horse-create-edit.component.scss']
 })
 export class HorseCreateEditComponent implements OnInit {
-
+  Sex = Sex;
   mode: HorseCreateEditMode = HorseCreateEditMode.create;
   horse: Horse = {
     name: '',
