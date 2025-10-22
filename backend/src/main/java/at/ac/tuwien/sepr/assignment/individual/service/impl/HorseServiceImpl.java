@@ -30,6 +30,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import org.springframework.dao.DataAccessException;
+
+
 
 /**
  * Implementation of {@link HorseService} for handling image storage and retrieval.
@@ -146,6 +149,18 @@ public class HorseServiceImpl implements HorseService {
   }
 
 */
+
+  @Override
+  public void delete(long id) throws NotFoundException, ConflictException {
+    LOG.trace("delete({})", id);
+    try {
+      dao.delete(id);
+    } catch (DataAccessException e) {
+      // wegen FK-Verletzung
+      throw new ConflictException("Horse cannot be deleted", List.of("There are referencing entities for horse " + id));
+    }
+  }
+
 
 
   @Override

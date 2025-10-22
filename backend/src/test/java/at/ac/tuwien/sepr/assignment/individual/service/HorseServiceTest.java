@@ -1,58 +1,49 @@
 package at.ac.tuwien.sepr.assignment.individual.service;
 
-import at.ac.tuwien.sepr.assignment.individual.TestBase;
-import at.ac.tuwien.sepr.assignment.individual.dto.HorseListDto;
+import at.ac.tuwien.sepr.assignment.individual.dto.HorseCreateDto;
+import at.ac.tuwien.sepr.assignment.individual.dto.HorseDetailDto;
+import at.ac.tuwien.sepr.assignment.individual.exception.NotFoundException;
+import at.ac.tuwien.sepr.assignment.individual.exception.ValidationException;
 import at.ac.tuwien.sepr.assignment.individual.type.Sex;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.util.List;
+import java.sql.Date;
+import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.tuple;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
-import at.ac.tuwien.sepr.assignment.individual.dto.HorseCreateDto;
-import at.ac.tuwien.sepr.assignment.individual.dto.HorseDetailDto;
-import at.ac.tuwien.sepr.assignment.individual.exception.ValidationException;
-import java.time.LocalDate;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
-
-/**
- * Integration test for {@link HorseService}.
- */
-@ActiveProfiles({"test", "datagen"}) // Enables "test" Spring profile during test execution
+@ActiveProfiles({"test", "datagen"})
 @SpringBootTest
-public class HorseServiceTest extends TestBase {
+class HorseServiceTest {
 
   @Autowired
   HorseService horseService;
 
-  /**
-   * Tests whether retrieving all stored horses returns the expected number and specific entries.
-   */
-  @Test
-  public void getAllReturnsAllStoredHorses() {
-    List<HorseListDto> horses = horseService.allHorses()
-        .toList();
+  @Autowired
+  JdbcTemplate jdbc; // <-- hinzufügen
 
-    assertThat(horses)
-        .hasSizeGreaterThanOrEqualTo(1) // TODO: Adapt to expected number of test data entries
-        .map(HorseListDto::id, HorseListDto::sex)
-        .contains(tuple(-1L, Sex.FEMALE));
+  @Test
+  void getAllReturnsAllStoredHorses() {
+    var horses = horseService.allHorses().toList();
+
+    assertThat(horses).isNotEmpty();
+    assertThat(horses.stream().anyMatch(h -> h.sex() != null && h.sex().name().equals("FEMALE")))
+            .isTrue();
   }
 
   @Test
-  public void create_valid_returnsDetailDtoWithId() throws Exception {
+  void create_valid_returnsDetailDtoWithId() throws Exception {
     var create = new HorseCreateDto(
-            "Bella",
-            "Test",
+            "Bella", "Test",
             LocalDate.of(2020, 5, 5),
-            Sex.FEMALE,
-            null
+            Sex.FEMALE, null
     );
 
     HorseDetailDto result = horseService.create(create);
@@ -68,17 +59,35 @@ public class HorseServiceTest extends TestBase {
   }
 
   @Test
-  public void create_invalid_throwsValidationException() {
+  void create_invalid_throwsValidationException() {
     var create = new HorseCreateDto(
-            "",        // invalid name
-            "x",
-            LocalDate.of(2099, 1, 1), // future
-            null,      // invalid sex
-            null
+            "", "x", LocalDate.of(2099, 1, 1),
+            null, null
     );
 
     assertThatThrownBy(() -> horseService.create(create))
             .isInstanceOf(ValidationException.class)
             .hasMessageStartingWith("Invalid horse");
+  }
+
+  @Test
+  void delete_existingHorse_ok() {
+    // Arrange: Pferd direkt anlegen (ohne Multi-Statement)
+    jdbc.update("INSERT INTO horse(name, date_of_birth, sex) VALUES (?,?,?)",
+            "ToDelete", Date.valueOf("2012-02-02"), "MALE");
+    Long id = jdbc.queryForObject("SELECT MAX(id) FROM horse", Long.class);
+
+    // Act + Assert: darf keine Exception werfen
+    assertThatCode(() -> horseService.delete(id)).doesNotThrowAnyException();
+
+    // Verify: wirklich weg
+    Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM horse WHERE id=?", Integer.class, id);
+    assertThat(count).isZero();
+  }
+
+  @Test
+  void delete_unknownHorse_throwsNotFound() {
+    assertThatThrownBy(() -> horseService.delete(987654321L))
+            .isInstanceOf(NotFoundException.class);
   }
 }

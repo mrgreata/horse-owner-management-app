@@ -1,6 +1,7 @@
 <h1 class="display-1">{{ heading }}</h1>
 
 
+
 <form #form="ngForm" (ngSubmit)="onSubmit(form)">
   <div class="row">
     <div class="mb-2 col-lg-6">
@@ -15,7 +16,7 @@
             name="horseName"
             placeholder="Horse name"
             class="form-control"
-            [class]="dynamicCssClassesForInput(horseNameModel)"
+            [ngClass]="dynamicCssClassesForInput(horseNameModel, form)"
             [(ngModel)]="horse.name"
             #horseNameModel="ngModel"
             required>
@@ -37,7 +38,7 @@
             id="horseDateOfBirth"
             name="horseDateOfBirth"
             class="form-control"
-            [class]="dynamicCssClassesForInput(horseDateOfBirthModel)"
+            [ngClass]="dynamicCssClassesForInput(horseDateOfBirthModel, form)"
             [(ngModel)]="horseBirthDateText"
             #horseDateOfBirthModel="ngModel"
             required>
@@ -61,9 +62,11 @@
             id="horseSex"
             name="horseSex"
             [(ngModel)]="horse.sex"
+            [ngClass]="{'is-invalid': horseSexModel.invalid && (horseSexModel.dirty || horseSexModel.touched || form.submitted)}"
+            #horseSexModel="ngModel"
             required>
-            <option value="FEMALE">Female</option>
-            <option value="MALE">Male</option>
+            <option [ngValue]="Sex.female">Female</option>
+            <option [ngValue]="Sex.male">Male</option>
           </select>
         </div>
       </div>
@@ -79,11 +82,14 @@
           name="horseOwner"
           class="col-md-10 col-lg-8"
           textInputClass="form-control"
-          valueNeedsToMatchSuggestion="true"
+          [ngModelOptions]="{ standalone: true }"
           [(ngModel)]="horse.owner"
-          [formatModel]="formatOwnerName"
-          [suggestions]="ownerSuggestions">
+          [suggestions]="ownerSuggestionsForAuto"
+          [formatModel]="ownerFormatter">
         </app-autocomplete>
+
+
+
       </div>
     </div>
   </div>
@@ -104,14 +110,33 @@
   </div>
 
 
-  <div class="mt-4 d-flex flex-row">
+  <div class="mt-4 d-flex flex-row align-items-center">
     <button
       class="btn btn-primary"
       [disabled]="!form.valid"
       type="submit">
       {{ submitButtonText }}
     </button>
+
+    <button
+      *ngIf="modeIsEdit"
+      type="button"
+      class="btn btn-outline-danger ms-2"
+      data-bs-toggle="modal"
+      data-bs-target="#delete-dialog">
+      Delete
+    </button>
+
+
+
   </div>
 </form>
 
+<!-- Dialog nur im Edit-Modus rendern -->
+<app-confirm-delete-dialog
+  *ngIf="modeIsEdit"
+  id="delete-dialog"
+  [deleteWhat]="horse?.name || ''"
+  (confirm)="deleteFromEdit()">
+</app-confirm-delete-dialog>
 

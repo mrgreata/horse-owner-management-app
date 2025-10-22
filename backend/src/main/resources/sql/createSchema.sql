@@ -18,4 +18,21 @@ CREATE TABLE IF NOT EXISTS horse
     image_content_type VARCHAR(255),
     CONSTRAINT fk_horse_owner
     FOREIGN KEY (owner_id) REFERENCES owner(id)
+    ON DELETE SET NULL
     );
+
+-- Pferde Eltern
+
+ALTER TABLE horse ADD COLUMN IF NOT EXISTS mother_id BIGINT;
+ALTER TABLE horse ADD COLUMN IF NOT EXISTS father_id BIGINT;
+
+ALTER TABLE horse
+    ADD CONSTRAINT IF NOT EXISTS fk_horse_mother
+    FOREIGN KEY (mother_id) REFERENCES horse(id) ON DELETE SET NULL;
+
+ALTER TABLE horse
+    ADD CONSTRAINT IF NOT EXISTS fk_horse_father
+    FOREIGN KEY (father_id) REFERENCES horse(id) ON DELETE SET NULL;
+
+
+

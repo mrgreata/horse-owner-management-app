@@ -57,4 +57,18 @@ export class HorseService {
     return horse;
   }
 
+  getById(id: number): Observable<Horse> {
+    return this.http.get<Horse>(`${baseUri}/${id}`).pipe(map(this.fixHorseDate));
+  }
+
+  update(id: number, horse: HorseCreate): Observable<Horse> {
+    (horse as any).dateOfBirth = formatIsoDate(horse.dateOfBirth);
+    return this.http.put<Horse>(`${baseUri}/${id}`, horse).pipe(map(this.fixHorseDate));
+  }
+
+  delete(id: number): Observable<void> {
+    return this.http.delete<void>(`${baseUri}/${id}`);
+  }
+
+
 }

@@ -52,4 +52,6 @@ public interface HorseDao {
 
   void updateImage(long id, String imagePath, String contentType);
 
+  void delete(long id) throws NotFoundException;
+
 }

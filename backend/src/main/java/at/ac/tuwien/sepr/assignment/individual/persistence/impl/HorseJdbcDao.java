@@ -41,15 +41,16 @@ public class HorseJdbcDao implements HorseDao {
       "SELECT * FROM " + TABLE_NAME
           + " WHERE ID = :id";
 
-  private static final String SQL_UPDATE =
-      "UPDATE " + TABLE_NAME + """  
-          SET name = :name,
-              description = :description,                      
-              date_of_birth = :date_of_birth,                       
-              sex = :sex,                       
-              owner_id = :owner_id                       
-          WHERE id = :id                        
-          """;
+  private static final String SQL_UPDATE = """
+    UPDATE horse
+       SET name = :name,
+           description = :description,
+           date_of_birth = :date_of_birth,
+           sex = :sex,
+           owner_id = :owner_id
+     WHERE id = :id
+      """;
+
 
   private static final String SQL_INSERT = """
   INSERT INTO horse (name, description, date_of_birth, sex, owner_id, image_path, image_content_type)
@@ -206,4 +207,20 @@ public class HorseJdbcDao implements HorseDao {
             .param("id", id)
             .update();
   }
+
+  @Override
+  public void delete(long id) throws NotFoundException {
+    LOG.trace("delete({})", id);
+    int affected = jdbcClient.sql("DELETE FROM horse WHERE id = :id")
+            .param("id", id)
+            .update();
+
+    LOG.debug("delete({}) affectedRows={}", id, affected);
+    if (affected == 0) {
+      throw new NotFoundException("No horse with ID %d found".formatted(id));
+    }
+  }
+
+
+
 }

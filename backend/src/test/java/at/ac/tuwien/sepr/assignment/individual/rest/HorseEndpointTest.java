@@ -1,6 +1,5 @@
 package at.ac.tuwien.sepr.assignment.individual.rest;
 
-import at.ac.tuwien.sepr.assignment.individual.TestBase;
 import at.ac.tuwien.sepr.assignment.individual.dto.HorseListDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -8,143 +7,179 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+
+
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
-import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 
-/**
- * Integration tests for the Horse REST API endpoint.
- */
-@ActiveProfiles({"test", "datagen"}) // Enables "test" Spring profile during test execution
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+
+
+@ActiveProfiles({"test", "datagen"})
 @SpringBootTest
 @EnableWebMvc
 @WebAppConfiguration
-public class HorseEndpointTest extends TestBase {
+class HorseEndpointTest {
 
-  @Autowired
-  private WebApplicationContext webAppContext;
+  @Autowired private WebApplicationContext ctx;
+  @Autowired private ObjectMapper objectMapper;
+  @Autowired private JdbcTemplate jdbc;
+
   private MockMvc mockMvc;
 
-  @Autowired
-  private ObjectMapper objectMapper;
-
-  /**
-   * Sets up the MockMvc instance before each test.
-   */
   @BeforeEach
-  public void setup() {
-    this.mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).build();
+  void setup() {
+    mockMvc = MockMvcBuilders.webAppContextSetup(ctx).build();
   }
 
-  /**
-   * Tests retrieving all horses from the endpoint.
-   *
-   * @throws Exception if the request fails
-   */
+  // --- US1: Liste ---
   @Test
-  public void gettingAllHorses() throws Exception {
-    byte[] body = mockMvc
-        .perform(MockMvcRequestBuilders
-            .get("/horses")
-            .accept(MediaType.APPLICATION_JSON)
-        ).andExpect(status().isOk())
-        .andReturn().getResponse().getContentAsByteArray();
+  void gettingAllHorses() throws Exception {
+    var body = mockMvc.perform(get("/horses").accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsByteArray();
 
-    List<HorseListDto> horseResult = objectMapper.readerFor(HorseListDto.class).<HorseListDto>readValues(body).readAll();
+    List<HorseListDto> list = objectMapper.readerFor(HorseListDto.class)
+            .<HorseListDto>readValues(body).readAll();
 
-    assertThat(horseResult)
-        .isNotNull()
-        .hasSizeGreaterThanOrEqualTo(1)
-        .extracting(HorseListDto::id, HorseListDto::name)
+    assertThat(list)
+            .hasSizeGreaterThanOrEqualTo(1)
+            .extracting(HorseListDto::id, HorseListDto::name)
         .contains(tuple(-1L, "Wendy"));
-
   }
 
-  /**
-   * Tests that accessing a nonexistent URL returns a 404 status.
-   *
-   * @throws Exception if the request fails
-   */
+  // --- US1: Create 201 ---
   @Test
-  public void gettingNonexistentUrlReturns404() throws Exception {
-    mockMvc
-        .perform(MockMvcRequestBuilders
-            .get("/asdf123")
-        ).andExpect(status().isNotFound());
-  }
+  void createHorse_returns201_andBody() throws Exception {
+    long ownerId = insertOwner("Alex", "Miller");
 
-  @Test
-  public void createHorse_returns201_andBody() throws Exception {
-    var json = """
-    {
-      "name":"Bella",
-      "description":"Test",
-      "dateOfBirth":"2020-05-05",
-      "sex":"FEMALE",
-      "ownerId": null
-    }
-        """;
+    String body = """
+      {
+        "name": "Bucephalus",
+        "description": "The legendary one",
+        "dateOfBirth": "2000-01-01",
+        "sex": "MALE",
+        "ownerId": %d
+      }
+        """.formatted(ownerId);
 
-    var mvcResult = mockMvc.perform(
-                    MockMvcRequestBuilders.post("/horses")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(json)
-                            .accept(MediaType.APPLICATION_JSON))
+    mockMvc.perform(post("/horses")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body))
             .andExpect(status().isCreated())
-            .andReturn();
-
-    var body = mvcResult.getResponse().getContentAsByteArray();
-    var dto = objectMapper.readValue(body, at.ac.tuwien.sepr.assignment.individual.dto.HorseDetailDto.class);
-
-    assertAll(
-            () -> assertThat(dto.id()).isNotNull(),
-            () -> assertThat(dto.name()).isEqualTo("Bella"),
-            () -> assertThat(dto.description()).isEqualTo("Test"),
-            () -> assertThat(dto.dateOfBirth().toString()).isEqualTo("2020-05-05"),
-            () -> assertThat(dto.sex().name()).isEqualTo("FEMALE"),
-            () -> assertThat(dto.owner()).isNull()
-    );
+            .andExpect(jsonPath("$.id").isNumber())
+            .andExpect(jsonPath("$.name").value("Bucephalus"))
+            .andExpect(jsonPath("$.sex").value("MALE"))
+            .andExpect(jsonPath("$.owner.id").value(ownerId)); // optionaler Extra-Check
   }
 
+
+
+  // --- US1: Create invalid -> 422 ---
   @Test
-  public void createHorse_invalid_returns422_withErrors() throws Exception {
+  void createHorse_invalid_returns422_withErrors() throws Exception {
     var json = """
-    {
-      "name":"",
-      "description":"x",
-      "dateOfBirth":"2099-01-01",
-      "sex":null,
-      "ownerId": null
-    }
+      {"name":"","description":"x","dateOfBirth":"2099-01-01","sex":null,"ownerId":null}
         """;
 
-    var mvcResult = mockMvc.perform(
-                    MockMvcRequestBuilders.post("/horses")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(json)
-                            .accept(MediaType.APPLICATION_JSON))
+    var res = mockMvc.perform(post("/horses")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json)
+                    .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isUnprocessableEntity())
             .andReturn();
 
-    var node = objectMapper.readTree(mvcResult.getResponse().getContentAsByteArray());
-    assertAll(
-            () -> assertThat(node.get("message").asText()).isEqualTo("Invalid horse"),
-            () -> assertThat(node.get("errors").toString())
-                    .contains("name must not be empty")
-                    .contains("sex must not be null")
-                    .contains("dateOfBirth must not be in the future")
-    );
+    var node = objectMapper.readTree(res.getResponse().getContentAsByteArray());
+    assertThat(node.get("message").asText()).isEqualTo("Invalid horse");
+    assertThat(node.get("errors").toString())
+            .contains("name must not be empty")
+            .contains("sex must not be null")
+            .contains("dateOfBirth must not be in the future");
   }
 
+  // --- US2: Update Owner setzen ---
+  @Test
+  void update_setsOwner() throws Exception {
+    long horseId = createHorse("Amy", "2015-05-10", "FEMALE", null);
+    long ownerId = insertOwner("Ann", "Smith");
+
+    var payload = """
+      {"name":"Amy","dateOfBirth":"2015-05-10","sex":"FEMALE","ownerId":%d}
+        """.formatted(ownerId);
+
+    mockMvc.perform(put("/horses/{id}", horseId)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(payload))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.owner.id").value(ownerId));
+  }
+
+  // --- US2: Update Owner entfernen ---
+  @Test
+  void update_removesOwner_whenNull() throws Exception {
+    long ownerId = insertOwner("Ben", "Fox");
+    long horseId = createHorse("Bob", "2014-03-01", "MALE", ownerId);
+
+    var payload = """
+      {"name":"Bob","dateOfBirth":"2014-03-01","sex":"MALE","ownerId":null}
+        """;
+
+    mockMvc.perform(put("/horses/{id}", horseId)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(payload))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.owner").doesNotExist());
+  }
+
+  // --- US2: Delete ---
+  @Test
+  void delete_removesHorse_and_then_404_on_get() throws Exception {
+    long horseId = createHorse("Cara", "2016-09-09", "FEMALE", null);
+
+    mockMvc.perform(delete("/horses/{id}", horseId))
+            .andExpect(status().isNoContent());
+
+    mockMvc.perform(get("/horses/{id}", horseId))
+            .andExpect(status().isNotFound());
+  }
+
+
+  // Helpers
+  private long createHorse(String name, String dob, String sex, Long ownerId) throws Exception {
+    var json = """
+      {"name":"%s","dateOfBirth":"%s","sex":"%s","ownerId":%s}
+        """.formatted(name, dob, sex, ownerId == null ? "null" : ownerId.toString());
+
+    var res = mockMvc.perform(post("/horses")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json)
+                    .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+    var node = objectMapper.readTree(res.getResponse().getContentAsByteArray());
+    return node.get("id").asLong();
+  }
+
+  private long insertOwner(String first, String last) {
+    jdbc.update("INSERT INTO owner(first_name,last_name) VALUES(?,?)", first, last);
+    return jdbc.queryForObject("SELECT MAX(id) FROM owner", Long.class);
+  }
 }

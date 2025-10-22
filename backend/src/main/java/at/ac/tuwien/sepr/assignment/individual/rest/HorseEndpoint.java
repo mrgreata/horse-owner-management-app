@@ -27,9 +27,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 import at.ac.tuwien.sepr.assignment.individual.dto.HorseCreateDto;
-import at.ac.tuwien.sepr.assignment.individual.dto.HorseDetailDto;
-import at.ac.tuwien.sepr.assignment.individual.exception.ValidationException;
-import at.ac.tuwien.sepr.assignment.individual.exception.ConflictException;
+
+import org.springframework.web.bind.annotation.DeleteMapping;
+
 
 
 /**
@@ -99,7 +99,7 @@ public class HorseEndpoint {
       @PathVariable("id") long id,
       @RequestBody HorseUpdateRestDto toUpdate)
       throws ValidationException, ConflictException {
-    LOG.info("PUT " + BASE_PATH + "/{}", toUpdate);
+    LOG.info("PUT {}/{}", BASE_PATH, id);
     LOG.debug("Body of request:\n{}", toUpdate);
     try {
       return service.update(toUpdate.toUpdateDtoWithId(id));
@@ -131,6 +131,24 @@ public class HorseEndpoint {
   }
 
 */
+
+  @DeleteMapping("{id}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void delete(@PathVariable("id") long id) {
+    LOG.info("DELETE " + BASE_PATH + "/{}", id);
+    try {
+      service.delete(id);
+    } catch (NotFoundException e) {
+      HttpStatus status = HttpStatus.NOT_FOUND;
+      logClientError(status, "Horse to delete not found", e);
+      throw new ResponseStatusException(status, e.getMessage(), e);
+    } catch (ConflictException e) {
+      HttpStatus status = HttpStatus.CONFLICT;
+      logClientError(status, "Could not delete horse due to conflict", e);
+      throw new ResponseStatusException(status, e.getMessage(), e);
+    }
+  }
+
 
 
   /**

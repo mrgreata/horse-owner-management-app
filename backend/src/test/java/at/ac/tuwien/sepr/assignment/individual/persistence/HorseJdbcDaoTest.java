@@ -1,18 +1,24 @@
 package at.ac.tuwien.sepr.assignment.individual.persistence;
 
+import at.ac.tuwien.sepr.assignment.individual.dto.HorseUpdateDto;
 import at.ac.tuwien.sepr.assignment.individual.entity.Horse;
 import at.ac.tuwien.sepr.assignment.individual.exception.NotFoundException;
 import at.ac.tuwien.sepr.assignment.individual.type.Sex;
-import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
-
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+
+
+import java.time.LocalDate;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -21,84 +27,96 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @SpringBootTest
 class HorseJdbcDaoTest {
 
-  @Autowired
-  private HorseDao horseDao;
-
-  @Autowired
-  private JdbcTemplate jdbcTemplate;
+  @Autowired private HorseDao dao;
+  @Autowired private JdbcTemplate jdbc;
 
   @BeforeEach
-  void cleanDb() {
-    // Reihenfolge ist wichtig, falls später FKs dazukommen
-    jdbcTemplate.update("DELETE FROM horse");
+  void clean() {
+    jdbc.update("DELETE FROM horse");
+    jdbc.update("DELETE FROM owner");
+  }
+
+  private long insertOwner(String first, String last) {
+    jdbc.update("INSERT INTO owner(first_name, last_name) VALUES (?, ?)", first, last);
+    return jdbc.queryForObject("SELECT MAX(id) FROM owner", Long.class);
   }
 
   @Test
-  void insertShouldReturnGeneratedId() {
-    Horse horse = new Horse(
-            null,
-            "JUnity",
-            "Test horse",
-            LocalDate.of(2021, 5, 5),
-            Sex.FEMALE,
-            null,   // ownerId
-            null,   // imagePath
-            null    // imageContentType
-    );
-
-    Horse saved = horseDao.insert(horse);
-
-    assertNotNull(saved.id(), "ID should be generated");
-    assertEquals("JUnity", saved.name());
-    assertEquals(Sex.FEMALE, saved.sex());
-  }
-
-  @Test
-  void getByIdReturnsInsertedHorse() throws NotFoundException {
-    Horse saved = horseDao.insert(new Horse(
-            null,
-            "Bella",
-            "desc",
-            LocalDate.of(2019, 3, 10),
-            Sex.FEMALE,
-            null,   // ownerId
-            null,   // imagePath
-            null    // imageContentType
+  void insert_and_getById() throws Exception {
+    var saved = dao.insert(new Horse(
+            null, "Bella", "desc",
+            LocalDate.of(2019, 3, 10), Sex.FEMALE,
+            null, null, null
     ));
 
-    Horse loaded = horseDao.getById(saved.id());
-
+    var loaded = dao.getById(saved.id());
     assertEquals(saved.id(), loaded.id());
     assertEquals("Bella", loaded.name());
+    assertThat(loaded.ownerId()).isNull();
+
   }
 
   @Test
-  void getByIdThrowsWhenNotFound() {
-    assertThrows(NotFoundException.class, () -> horseDao.getById(999_999L));
+  void update_setOwner_thenRemoveOwner() throws Exception {
+    var saved = dao.insert(new Horse(
+            null, "Amy", null,
+            LocalDate.parse("2015-05-10"), Sex.FEMALE,
+            null, null, null
+    ));
+    long ownerId = insertOwner("Ann", "Smith");
+
+    var withOwner = dao.update(new HorseUpdateDto(
+            saved.id(), "Amy", null, LocalDate.parse("2015-05-10"), Sex.FEMALE, ownerId));
+    assertEquals(ownerId, withOwner.ownerId());
+
+    var removedOwner = dao.update(new HorseUpdateDto(
+            saved.id(), "Amy", null, LocalDate.parse("2015-05-10"), Sex.FEMALE, null));
+    assertThat(removedOwner.ownerId()).isNull();
   }
 
   @Test
-  void insert_persists_andReturnsEntityWithId() throws Exception {
-    var entity = new Horse(
-            null, "Bella", "Test", LocalDate.of(2020, 5, 5), Sex.FEMALE,
-            null,  // ownerId
-            null,  // imagePath
-            null   // imageContentType
-    );
+  void delete_then_getById_throwsNotFound() throws Exception {
+    var saved = dao.insert(new Horse(
+            null, "Cara", null,
+            LocalDate.parse("2016-09-09"), Sex.FEMALE,
+            null, null, null
+    ));
 
-    var saved = horseDao.insert(entity);
-    assertAll(
-            () -> assertThat(saved.id()).isNotNull(),
-            () -> assertThat(saved.name()).isEqualTo("Bella")
-    );
-
-    var loaded = horseDao.getById(saved.id());
-    assertAll(
-            () -> assertThat(loaded.name()).isEqualTo("Bella"),
-            () -> assertThat(loaded.description()).isEqualTo("Test"),
-            () -> assertThat(loaded.dateOfBirth()).isEqualTo(LocalDate.of(2020, 5, 5)),
-            () -> assertThat(loaded.sex()).isEqualTo(Sex.FEMALE),
-            () -> assertThat(loaded.ownerId()).isNull()
-    );
+    dao.delete(saved.id());
+    assertThrows(NotFoundException.class, () -> dao.getById(saved.id()));
   }
+
+  // imports: org.junit.jupiter.api.*, org.assertj.core.api.Assertions.*, org.springframework.beans.factory.annotation.Autowired;
+  // ggf. @SpringBootTest oder @JdbcTest + @Import(HorseJdbcDao.class)
+
+  @Test
+  void delete_existingHorse_removesRow_andChildrenAreDetached() throws Exception {
+    // Arrange: Parent + Child anlegen (zweischrittig, ohne SCOPE_IDENTITY)
+    jdbc.update("INSERT INTO horse(name, date_of_birth, sex) VALUES (?,?,?)",
+            "Parent", java.sql.Date.valueOf("2000-01-01"), "MALE");
+    Long parentId = jdbc.queryForObject("SELECT MAX(id) FROM horse", Long.class);
+
+    jdbc.update("INSERT INTO horse(name, date_of_birth, sex, father_id) VALUES (?,?,?,?)",
+            "Child", java.sql.Date.valueOf("2020-01-01"), "FEMALE", parentId);
+    Long childId = jdbc.queryForObject("SELECT MAX(id) FROM horse", Long.class);
+
+    // Act
+    dao.delete(parentId);
+
+    // Assert: Parent weg
+    Integer parentCount = jdbc.queryForObject("SELECT COUNT(*) FROM horse WHERE id=?", Integer.class, parentId);
+    assertThat(parentCount).isZero();
+
+    // Assert: Child hat FK auf NULL (wegen ON DELETE SET NULL)
+    Long fk = jdbc.queryForObject("SELECT father_id FROM horse WHERE id=?", Long.class, childId);
+    assertThat(fk).isNull();
+  }
+
+  @Test
+  void delete_unknownId_throwsNotFound() {
+    assertThatThrownBy(() -> dao.delete(999_999L))   // ✅ braucht den AssertJ-Static-Import
+            .isInstanceOf(NotFoundException.class)
+            .hasMessageContaining("999999");
+  }
+
 }

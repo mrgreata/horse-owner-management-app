@@ -107,20 +107,27 @@
           <td>{{ horse.description || '—' }}</td>
           <td>{{ dateOfBirthAsLocaleDate(horse) }}</td>
           <td>{{ horse.sex === 'FEMALE' ? 'Female' : 'Male' }}</td>
-          <td>{{ ownerName(horse.owner) || '—' }}</td>
+          <td>{{ ownerName(horse.owner || null) || '—' }}</td>
           <td>
             <div class="btn-group">
-              <a class="btn btn-sm responsive-info-button"
-                 aria-label="Show horse details">
-                <i class="bi bi-info-lg"></i>
+              <!-- Edit -->
+              <a class="btn btn-sm btn-outline-primary"
+                 [routerLink]="['/horses', horse.id, 'edit']"
+                 aria-label="Edit horse">
+                <i class="bi bi-pencil"></i>
               </a>
 
-              <button class="btn btn-sm responsive-danger-button" (click)="horseForDeletion = horse"
-                      data-bs-toggle="modal" data-bs-target="#delete-dialog" aria-label="Delete horse">
+              <!-- Delete -->
+              <button class="btn btn-sm responsive-danger-button"
+                      (click)="horseForDeletion = horse"
+                      data-bs-toggle="modal"
+                      data-bs-target="#delete-dialog"
+                      aria-label="Delete horse">
                 <i class="bi bi-trash"></i>
               </button>
             </div>
           </td>
+
         </tr>
       }
     </tbody>
@@ -130,6 +137,7 @@
 <app-confirm-delete-dialog
   id="delete-dialog"
   [hidden]="!horseForDeletion"
-  [deleteWhat]="horseForDeletion?.name"
-  (confirm)="deleteHorse(horseForDeletion)">
+  [deleteWhat]="horseForDeletion?.name || ''"
+  (confirm)="deleteHorse(horseForDeletion!)">
 </app-confirm-delete-dialog>
+

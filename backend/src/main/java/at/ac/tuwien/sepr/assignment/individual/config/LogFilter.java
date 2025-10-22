@@ -17,6 +17,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
+
+
 
 /**
  * ServletFilter to log every request.
@@ -24,8 +29,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class LogFilter extends OncePerRequestFilter {
   private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
+
+  /*
   private static final  DecimalFormat REQUEST_RUNTIME_FORMAT = new DecimalFormat("#.###", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
   private static final Long NANOSECONDS_PER_MS = 1000_000L;
+  */
+  private static final long NANO_PER_MS = 1_000_000L;
+
   private static final List<String> MUTED_PATHS = Arrays.asList(
       "/swagger-ui/",
       "/swagger.yaml"

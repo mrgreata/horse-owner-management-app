@@ -7,7 +7,7 @@ export interface Horse {
   description?: string;
   dateOfBirth: Date;
   sex: Sex;
-  owner?: Owner;
+  owner?: Owner | null;
 }
 
 export interface HorseSearch {
@@ -20,7 +20,7 @@ export interface HorseCreate {
   description?: string;
   dateOfBirth: Date;
   sex: Sex;
-  ownerId?: number;
+  ownerId?: number | null;
 }
 
 export function convertFromHorseToCreate(horse: Horse): HorseCreate {
@@ -29,7 +29,7 @@ export function convertFromHorseToCreate(horse: Horse): HorseCreate {
     description: horse.description,
     dateOfBirth: horse.dateOfBirth,
     sex: horse.sex,
-    ownerId: horse.owner?.id,
+    ownerId: horse.owner?.id ?? null,
   };
 }
 

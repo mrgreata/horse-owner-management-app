@@ -4,7 +4,6 @@ import {ActivatedRoute, Router} from '@angular/router';
 import {ToastrService} from 'ngx-toastr';
 import {Observable, of} from 'rxjs';
 import {AutocompleteComponent} from 'src/app/component/autocomplete/autocomplete.component';
-import {Horse, convertFromHorseToCreate} from 'src/app/dto/horse';
 import {Owner} from 'src/app/dto/owner';
 import {Sex} from 'src/app/dto/sex';
 import {ErrorFormatterService} from 'src/app/service/error-formatter.service';
@@ -12,6 +11,10 @@ import {HorseService} from 'src/app/service/horse.service';
 import {OwnerService} from 'src/app/service/owner.service';
 import {formatIsoDate} from "../../../utils/date-helper";
 import {NgClass} from "@angular/common";
+import { ConfirmDeleteDialogComponent } from 'src/app/component/confirm-delete-dialog/confirm-delete-dialog.component';
+import {Horse} from 'src/app/dto/horse';
+import { CommonModule } from '@angular/common';
+
 
 export enum HorseCreateEditMode {
   create,
@@ -22,22 +25,25 @@ export enum HorseCreateEditMode {
   selector: 'app-horse-create-edit',
   templateUrl: './horse-create-edit.component.html',
   imports: [
+    CommonModule,
     FormsModule,
     AutocompleteComponent,
-    FormsModule,
-    NgClass
+    NgClass,
+    ConfirmDeleteDialogComponent
   ],
   standalone: true,
   styleUrls: ['./horse-create-edit.component.scss']
 })
 export class HorseCreateEditComponent implements OnInit {
   Sex = Sex;
+  HorseCreateEditMode = HorseCreateEditMode;
   mode: HorseCreateEditMode = HorseCreateEditMode.create;
   horse: Horse = {
     name: '',
     description: '',
     dateOfBirth: new Date(),
     sex: Sex.female,
+    owner: null as Owner | null,
   };
   horseBirthDateIsSet = false;
 
@@ -53,14 +59,17 @@ export class HorseCreateEditComponent implements OnInit {
   }
 
   public get heading(): string {
-    switch (this.mode) {
-      case HorseCreateEditMode.create:
-        return 'Create New Horse';
-      default:
-        return '?';
-    }
+    return this.mode === HorseCreateEditMode.create ? 'Create New Horse' : 'Edit Horse';
+  }
+  public get submitButtonText(): string {
+    return this.mode === HorseCreateEditMode.create ? 'Create' : 'Save';
+  }
+  private get modeActionFinished(): string {
+    return this.mode === HorseCreateEditMode.create ? 'created' : 'updated';
   }
 
+
+  /*
   public get submitButtonText(): string {
     switch (this.mode) {
       case HorseCreateEditMode.create:
@@ -69,6 +78,7 @@ export class HorseCreateEditComponent implements OnInit {
         return '?';
     }
   }
+   */
 
   public get horseBirthDateText(): string {
     if (!this.horseBirthDateIsSet) {
@@ -103,7 +113,7 @@ export class HorseCreateEditComponent implements OnInit {
     }
   }
 
-
+/*
   private get modeActionFinished(): string {
     switch (this.mode) {
       case HorseCreateEditMode.create:
@@ -112,47 +122,145 @@ export class HorseCreateEditComponent implements OnInit {
         return '?';
     }
   }
+*/
+  ownerSuggestions = (input: string): Observable<Owner[]> =>
+    input.trim() === '' ? of([]) : this.ownerService.searchByName(input, 5);
 
-  ownerSuggestions = (input: string) => (input === '')
-    ? of([])
-    : this.ownerService.searchByName(input, 5);
+// Wrapper nur fürs Template, damit die Template-Typprüfung zufrieden ist:
+  readonly ownerSuggestionsForAuto =
+    (input: string): Observable<never[]> =>
+      this.ownerSuggestions(input) as unknown as Observable<never[]>;
+
 
   ngOnInit(): void {
-    this.route.data.subscribe(data => {
-      this.mode = data.mode;
+    // Modus direkt aus den Route-Daten lesen (siehe app.routes.ts)
+    this.route.data.subscribe(d => {
+      this.mode = d['mode'] ?? HorseCreateEditMode.create;
+
+      if (this.modeIsEdit) {
+        const id = Number(this.route.snapshot.paramMap.get('id'));
+        this.service.getById(id).subscribe({
+          next: horse => {
+            this.horse = horse;
+            this.horseBirthDateIsSet = true;
+          },
+          error: err => {
+            this.notification.error(
+              this.errorFormatter.format(err),
+              'Could Not Load Horse',
+              { enableHtml: true, timeOut: 10000 }
+            );
+            this.router.navigate(['/horses']);
+          }
+        });
+      }
+    });
+
+    // Falls man innerhalb der Komponente zu einem anderen /:id/edit navigiert:
+    this.route.paramMap.subscribe(pm => {
+      if (this.modeIsEdit) {
+        const id = Number(pm.get('id'));
+        if (!Number.isNaN(id)) {
+          this.service.getById(id).subscribe({
+            next: horse => {
+              this.horse = horse;
+              this.horseBirthDateIsSet = true;
+            },
+            error: err => {
+              this.notification.error(
+                this.errorFormatter.format(err),
+                'Could Not Load Horse',
+                { enableHtml: true, timeOut: 10000 }
+              );
+              this.router.navigate(['/horses']);
+            }
+          });
+        }
+      }
     });
   }
 
-  public dynamicCssClassesForInput(input: NgModel): any {
+
+
+  get modeIsEdit(): boolean {
+    return this.mode === HorseCreateEditMode.edit;
+  }
+
+
+  public dynamicCssClassesForInput(input: NgModel, form?: NgForm): any {
     return {
-      'is-invalid': !input.valid && !input.pristine,
+      'is-invalid': input.invalid && (input.dirty || input.touched || !!form?.submitted),
     };
   }
 
+
   public formatOwnerName(owner: Owner | null | undefined): string {
-    return (owner == null)
-      ? ''
-      : `${owner.firstName} ${owner.lastName}`;
+    return owner ? `${owner.firstName} ${owner.lastName}` : '';
+  }
+  readonly ownerFormatter = (o: Owner | null | undefined) => this.formatOwnerName(o);
+
+  onOwnerSelected(owner: Owner | null) {
+    this.horse.owner = owner;
   }
 
 
+  public deleteFromEdit(): void {
+    const id = Number(this.route.snapshot.paramMap.get('id'));
+    this.service.delete(id).subscribe({
+      next: () => {
+        this.notification.success(`Horse ${this.horse.name} deleted.`);
+        this.router.navigate(['/horses']);
+      },
+      error: err => {
+        this.notification.error(this.errorFormatter.format(err), 'Could Not Delete Horse', { enableHtml: true, timeOut: 10000 });
+      }
+    });
+  }
+
+
+
   public onSubmit(form: NgForm): void {
-    console.log('is form valid?', form.valid, this.horse);
-    if (form.valid) {
-      if (this.horse.description === '') {
-        delete this.horse.description;
+    if (!form.valid) {
+      return;
+    }
+
+    if (this.horse.description === '') {
+      delete this.horse.description;
+    }
+
+    let observable: Observable<Horse>;
+
+    switch (this.mode) {
+      case HorseCreateEditMode.create: {
+        observable = this.service.create({
+          name: this.horse.name,
+          description: this.horse.description,
+          dateOfBirth: this.horse.dateOfBirth,
+          sex: this.horse.sex,
+          ownerId: this.horse.owner?.id ?? null,
+        });
+        break;
       }
-      let observable: Observable<Horse>;
-      switch (this.mode) {
-        case HorseCreateEditMode.create:
-          observable = this.service.create(
-            convertFromHorseToCreate(this.horse)
-          );
-          break;
-        default:
-          console.error('Unknown HorseCreateEditMode', this.mode);
-          return;
+      case HorseCreateEditMode.edit: {
+        const id = Number(this.route.snapshot.paramMap.get('id'));
+        observable = this.service.update(id, {
+          name: this.horse.name,
+          description: this.horse.description,
+          dateOfBirth: this.horse.dateOfBirth,
+          sex: this.horse.sex,
+          ownerId: this.horse.owner?.id ?? null,
+        });
+        break;
       }
+      default:
+        console.error('Unknown HorseCreateEditMode', this.mode);
+        return;
+    }
+
+    if (this.horse.owner && !this.horse.owner.id) {
+      this.notification.error('Please select an owner from suggestions.');
+      return;
+    }
       observable.subscribe({
         next: data => {
           this.notification.success(`Horse ${this.horse.name} successfully ${this.modeActionFinished}.`);
@@ -167,5 +275,4 @@ export class HorseCreateEditComponent implements OnInit {
         }
       });
     }
-  }
 }

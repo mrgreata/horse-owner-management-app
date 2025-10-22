@@ -4,23 +4,29 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.context.annotation.Bean;
 
-/**
- * CORS configuration that effectively disables restrictions for cross-origin requests.
- * This configuration is active in all profiles except "prod" and is useful during development.
- * <b>Warning:</b> Disabling CORS in production can lead to security vulnerabilities.
- */
+import com.fasterxml.jackson.annotation.JsonInclude;             // <- NEU
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
+
 @Profile("!prod")
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-  /**
-   * Configures CORS to allow all origins and HTTP methods.
-   *
-   * @param registry the {@link CorsRegistry} to configure
-   */
   @Override
   public void addCorsMappings(CorsRegistry registry) {
     registry.addMapping("/**").allowedMethods("GET", "POST", "OPTIONS", "HEAD", "DELETE", "PUT", "PATCH");
+  }
+
+  @Bean
+  public Jackson2ObjectMapperBuilderCustomizer jsonCustomizer() {
+    return builder -> {
+      builder.modules(new JavaTimeModule());
+      builder.featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+      builder.simpleDateFormat("yyyy-MM-dd");
+      builder.serializationInclusion(JsonInclude.Include.NON_NULL); // <- WICHTIG
+    };
   }
 }
