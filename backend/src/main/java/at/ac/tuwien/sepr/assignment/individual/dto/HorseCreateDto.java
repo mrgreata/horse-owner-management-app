@@ -15,5 +15,7 @@ public record HorseCreateDto(
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
         LocalDate dateOfBirth,
         Sex sex,
-        Long ownerId
+        Long ownerId,
+        Long motherId,
+        Long fatherId
 ) {}

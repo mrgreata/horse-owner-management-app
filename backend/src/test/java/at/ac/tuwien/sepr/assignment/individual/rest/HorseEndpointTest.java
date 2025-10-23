@@ -1,7 +1,9 @@
 package at.ac.tuwien.sepr.assignment.individual.rest;
 
 import at.ac.tuwien.sepr.assignment.individual.dto.HorseListDto;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,21 +17,20 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
-
-
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+
 
 
 @ActiveProfiles({"test", "datagen"})
@@ -180,6 +181,74 @@ class HorseEndpointTest {
 
   private long insertOwner(String first, String last) {
     jdbc.update("INSERT INTO owner(first_name,last_name) VALUES(?,?)", first, last);
-    return jdbc.queryForObject("SELECT MAX(id) FROM owner", Long.class);
+    Number n = jdbc.queryForObject("SELECT MAX(id) FROM owner", Number.class);
+    return n.longValue();
   }
+
+
+  @Test
+  void post_withValidParents_returns201AndParents() throws Exception {
+    long mother = insertHorse("M", "2010-01-01", "FEMALE");
+    long father = insertHorse("F", "2010-01-02", "MALE");
+
+    String json = """
+    {"name":"Candy","description":"Foal","dateOfBirth":"2016-05-03","sex":"FEMALE",
+     "ownerId":null,"motherId":%d,"fatherId":%d}
+        """.formatted(mother, father);
+
+    mockMvc.perform(post("/horses")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.motherId").value(mother))
+            .andExpect(jsonPath("$.fatherId").value(father));
+  }
+
+  @Test
+  void post_sameSexParents_returns422() throws Exception {
+    long p1 = insertHorse("A", "2010-01-01", "MALE");
+    long p2 = insertHorse("B", "2011-01-01", "MALE");
+
+    String json = """
+    {"name":"X","dateOfBirth":"2016-01-01","sex":"FEMALE",
+     "motherId":%d,"fatherId":%d}
+        """.formatted(p1, p2);
+
+    mockMvc.perform(post("/horses")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json))
+            .andExpect(status().isUnprocessableEntity());
+  }
+
+  @Test
+  void post_unknownParent_returns404() throws Exception {
+    String json = """
+    {"name":"X","dateOfBirth":"2016-01-01","sex":"FEMALE","motherId":999999}
+        """;
+
+    mockMvc.perform(post("/horses")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json))
+            .andExpect(status().isNotFound());
+  }
+
+  private long insertHorse(String name, String dob, String sex) throws Exception {
+    String json = """
+    {"name":"%s","dateOfBirth":"%s","sex":"%s"}
+        """.formatted(name, dob, sex);
+
+    var result = mockMvc.perform(post("/horses")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+    String response = result.getResponse().getContentAsString();
+    Number id = JsonPath.parse(response).read("$.id", Number.class);
+    return id.longValue();
+
+  }
+
+
+
 }

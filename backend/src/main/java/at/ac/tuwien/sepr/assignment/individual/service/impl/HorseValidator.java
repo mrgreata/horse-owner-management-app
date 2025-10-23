@@ -1,67 +1,57 @@
 package at.ac.tuwien.sepr.assignment.individual.service.impl;
 
-
+import at.ac.tuwien.sepr.assignment.individual.dto.HorseCreateDto;
 import at.ac.tuwien.sepr.assignment.individual.dto.HorseUpdateDto;
-import at.ac.tuwien.sepr.assignment.individual.exception.ConflictException;
+import at.ac.tuwien.sepr.assignment.individual.entity.Horse;
 import at.ac.tuwien.sepr.assignment.individual.exception.ValidationException;
-import java.lang.invoke.MethodHandles;
-import java.util.ArrayList;
-import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import at.ac.tuwien.sepr.assignment.individual.dto.HorseCreateDto;
+import java.lang.invoke.MethodHandles;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects; // <-- hinzugefügt
 
-
-/**
- * Validator for horse-related operations, ensuring that all horse data meets the required constraints.
- */
 @Component
 public class HorseValidator {
   private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
-
-  /**
-   * Validates a horse before updating, ensuring all fields meet constraints and checking for conflicts.
-   *
-   * @param horse the {@link HorseUpdateDto} to validate
-   * @throws ValidationException if validation fails
-   * @throws ConflictException   if conflicts with existing data are detected
-   */
-  public void validateForUpdate(HorseUpdateDto horse) throws ValidationException, ConflictException {
+  public void validateForUpdate(HorseUpdateDto horse) throws ValidationException { // <-- ConflictException entfernt
     LOG.trace("validateForUpdate({})", horse);
-    List<String> validationErrors = new ArrayList<>();
+    List<String> errors = new ArrayList<>();
 
     if (horse.id() == null) {
-      validationErrors.add("No ID given");
+      errors.add("No ID given");
+    }
+    // gleiche Basisregeln wie bei Create (empfohlen)
+    if (horse.name() == null || horse.name().isBlank()) {
+      errors.add("name must not be empty");
+    }
+    if (horse.sex() == null) {
+      errors.add("sex must not be null");
+    }
+    if (horse.dateOfBirth() == null || horse.dateOfBirth().isAfter(LocalDate.now())) {
+      errors.add("dateOfBirth must not be in the future");
     }
 
     if (horse.description() != null) {
       if (horse.description().isBlank()) {
-        validationErrors.add("Horse description is given but blank");
+        errors.add("Horse description is given but blank");
       }
       if (horse.description().length() > 4095) {
-        validationErrors.add("Horse description too long: longer than 4095 characters");
+        errors.add("Horse description too long: longer than 4095 characters");
       }
     }
 
-    if (!validationErrors.isEmpty()) {
-      throw new ValidationException("Validation of horse for update failed", validationErrors);
+    if (!errors.isEmpty()) {
+      throw new ValidationException("Invalid horse", errors); // gleiche Summary wie bei Create
     }
-
   }
 
-  /**
-   * Validates a new horse before creation according to US1/TS15.
-   *
-   * @param dto the data to validate
-   * @throws ValidationException if any field is invalid; the exception contains all error messages
-   */
   public void validateForCreate(HorseCreateDto dto) throws ValidationException {
     var errors = new ArrayList<String>();
-
     if (dto == null) {
       errors.add("body must not be null");
     } else {
@@ -77,10 +67,36 @@ public class HorseValidator {
         errors.add("dateOfBirth must not be in the future");
       }
     }
-
     if (!errors.isEmpty()) {
       throw new ValidationException("Invalid horse", errors);
     }
   }
 
+  public void validateParents(LocalDate childDob, Long childId, Horse mother, Horse father)
+          throws ValidationException {
+    List<String> errors = new ArrayList<>();
+
+    if (mother != null && father != null && mother.sex() == father.sex()) {
+      errors.add("Parents must be of opposite sex");
+    }
+    if (childId != null) {
+      if (mother != null && Objects.equals(mother.id(), childId)) {
+        errors.add("cannot be its own mother");
+      }
+      if (father != null && Objects.equals(father.id(), childId)) {
+        errors.add("cannot be its own father");
+      }
+    }
+    if (childDob != null) {
+      if (mother != null && (mother.dateOfBirth() == null || !mother.dateOfBirth().isBefore(childDob))) {
+        errors.add("Mother must be older than child");
+      }
+      if (father != null && (father.dateOfBirth() == null || !father.dateOfBirth().isBefore(childDob))) {
+        errors.add("Father must be older than child");
+      }
+    }
+    if (!errors.isEmpty()) {
+      throw new ValidationException("Invalid horse", errors);
+    }
+  }
 }

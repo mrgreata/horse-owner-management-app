@@ -19,6 +19,9 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
+import at.ac.tuwien.sepr.assignment.individual.dto.HorseUpdateDto;
+
+
 @ActiveProfiles({"test", "datagen"})
 @SpringBootTest
 class HorseServiceTest {
@@ -43,7 +46,10 @@ class HorseServiceTest {
     var create = new HorseCreateDto(
             "Bella", "Test",
             LocalDate.of(2020, 5, 5),
-            Sex.FEMALE, null
+            Sex.FEMALE,
+            null,   // ownerId
+            null,   // motherId
+            null    // fatherId
     );
 
     HorseDetailDto result = horseService.create(create);
@@ -62,7 +68,10 @@ class HorseServiceTest {
   void create_invalid_throwsValidationException() {
     var create = new HorseCreateDto(
             "", "x", LocalDate.of(2099, 1, 1),
-            null, null
+            null,
+            null,  // ownerId
+            null,  // motherId
+            null   // fatherId
     );
 
     assertThatThrownBy(() -> horseService.create(create))
@@ -90,4 +99,88 @@ class HorseServiceTest {
     assertThatThrownBy(() -> horseService.delete(987654321L))
             .isInstanceOf(NotFoundException.class);
   }
+
+
+  //US4
+  @Test
+  void create_sameSexParents_throwsValidation() {
+    long p1 = insertHorse("A", "2010-01-01", "MALE");
+    long p2 = insertHorse("B", "2011-01-01", "MALE");
+
+    var dto = new HorseCreateDto(
+            "X", null,
+            LocalDate.parse("2016-01-01"),
+            Sex.FEMALE,
+            null,    // ownerId
+            p1,      // motherId (absichtlich MALE -> Regel wird im Validator geprüft)
+            p2       // fatherId
+    );
+
+    assertThatThrownBy(() -> horseService.create(dto))
+            .isInstanceOf(ValidationException.class)
+            .hasMessageContaining("Parents must be of opposite sex");
+  }
+
+  @Test
+  void update_selfParent_throwsValidation() throws Exception {
+    long child = insertHorse("Kid", "2016-01-01", "MALE");
+
+    var dto = new HorseUpdateDto(
+            child, "Kid", null,
+            LocalDate.parse("2016-01-01"),
+            Sex.MALE,
+            null,       // ownerId
+            child,      // motherId -> self-parent
+            null        // fatherId
+    );
+
+    assertThatThrownBy(() -> horseService.update(dto))
+            .isInstanceOf(ValidationException.class)
+            .hasMessageContaining("cannot be its own mother");
+  }
+
+  @Test
+  void create_parentNotOlder_throwsValidation() {
+    long youngMother = insertHorse("M", "2020-01-01", "FEMALE");
+
+    var dto = new HorseCreateDto(
+            "Kid", null,
+            LocalDate.parse("2020-01-01"),
+            Sex.MALE,
+            null,           // ownerId
+            youngMother,    // motherId (gleich alt wie Kind)
+            null
+    );
+
+    assertThatThrownBy(() -> horseService.create(dto))
+            .isInstanceOf(ValidationException.class)
+            .hasMessageContaining("Mother must be older than child");
+  }
+
+  @Test
+  void create_unknownParent_throwsNotFound() {
+    var dto = new HorseCreateDto(
+            "Kid", null,
+            LocalDate.parse("2016-01-01"),
+            Sex.MALE,
+            null,         // ownerId
+            999_999L,     // motherId unbekannt
+            null
+    );
+
+    assertThatThrownBy(() -> horseService.create(dto))
+            .isInstanceOf(NotFoundException.class);
+  }
+
+  // ---------- Helpers ----------
+
+  private long insertHorse(String name, String dob, String sex) {
+    jdbc.update("INSERT INTO horse(name, date_of_birth, sex) VALUES (?,?,?)",
+            name, Date.valueOf(dob), sex);
+    return jdbc.queryForObject("SELECT MAX(id) FROM horse", Long.class);
+  }
+
+
+
+
 }

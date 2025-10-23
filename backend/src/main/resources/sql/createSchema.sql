@@ -35,4 +35,14 @@ ALTER TABLE horse
     FOREIGN KEY (father_id) REFERENCES horse(id) ON DELETE SET NULL;
 
 
+ALTER TABLE horse
+    ADD CONSTRAINT IF NOT EXISTS ck_horse_parent_distinct
+    CHECK (mother_id IS NULL OR father_id IS NULL OR mother_id <> father_id);
+
+ALTER TABLE horse
+    ADD CONSTRAINT IF NOT EXISTS ck_horse_not_self_parent
+    CHECK (
+    (mother_id IS NULL OR mother_id <> id)
+    AND (father_id IS NULL OR father_id <> id)
+    );
 

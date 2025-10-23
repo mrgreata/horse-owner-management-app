@@ -94,6 +94,47 @@
     </div>
   </div>
 
+  <!-- Parents in einer gemeinsamen Row -->
+  <div class="row">
+    <div class="mb-2 col-lg-6">
+      <div class="row">
+        <label for="horseMother" class="col-form-label text-md-end text-muted col-md-2 col-lg-4">
+          Mother
+        </label>
+        <app-autocomplete
+          id="horseMother"
+          name="horseMother"
+          class="col-md-10 col-lg-8"
+          textInputClass="form-control"
+          [ngModelOptions]="{ standalone: true }"
+          [(ngModel)]="motherSelection"
+          [suggestions]="motherSuggestionsForAuto"
+          [formatModel]="parentFormatter">
+        </app-autocomplete>
+      </div>
+    </div>
+
+    <div class="mb-2 col-lg-6">
+      <div class="row">
+        <label for="horseFather" class="col-form-label text-md-end text-muted col-md-2 col-lg-4">
+          Father
+        </label>
+        <app-autocomplete
+          id="horseFather"
+          name="horseFather"
+          class="col-md-10 col-lg-8"
+          textInputClass="form-control"
+          [ngModelOptions]="{ standalone: true }"
+          [(ngModel)]="fatherSelection"
+          [suggestions]="fatherSuggestionsForAuto"
+          [formatModel]="parentFormatter">
+        </app-autocomplete>
+      </div>
+    </div>
+  </div>
+
+
+
 
   <div class="row mb-2">
     <label for="horseDescription" class="col-form-label text-md-end text-muted col-md-2">

@@ -1,60 +1,38 @@
-import {HttpClient} from '@angular/common/http';
+import {HttpClient, HttpParams} from '@angular/common/http';
 import {Injectable} from '@angular/core';
 import {map, Observable} from 'rxjs';
 import {environment} from 'src/environments/environment';
-import {Horse, HorseCreate} from '../dto/horse';
-import {formatIsoDate} from "../utils/date-helper";
+import {Horse, HorseCreate, HorseSearch} from '../dto/horse';
+import {formatIsoDate} from '../utils/date-helper';
 
 
 const baseUri = environment.backendUrl + '/horses';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class HorseService {
+  constructor(private http: HttpClient) {}
 
-  constructor(
-    private http: HttpClient
-  ) {
-  }
-
-  /**
-   * Get all horses stored in the system
-   *
-   * @return observable list of found horses.
-   */
   getAll(): Observable<Horse[]> {
-    return this.http.get<Horse[]>(baseUri)
-      .pipe(
-        map(horses => horses.map(this.fixHorseDate))
-      );
+    return this.http.get<Horse[]>(baseUri).pipe(map(hs => hs.map(this.fixHorseDate)));
   }
 
-  /**
-   * Create a new horse in the system.
-   *
-   * @param horse the data for the horse that should be created
-   * @return an Observable for the created horse
-   */
+  /** Suche mit kombinierbaren Parametern (für Autocomplete Mother/Father wichtig) */
+  search(params: HorseSearch): Observable<Horse[]> {
+    let httpParams = new HttpParams();
+    if (params.name) httpParams = httpParams.set('name', params.name);
+    if (params.description) httpParams = httpParams.set('description', params.description);
+    if (params.sex) httpParams = httpParams.set('sex', params.sex);
+    if (params.ownerName) httpParams = httpParams.set('ownerName', params.ownerName);
+    if (params.limit != null) httpParams = httpParams.set('limit', String(params.limit));
+    if (params.bornBefore) httpParams = httpParams.set('bornBefore', formatIsoDate(params.bornBefore));
+
+    return this.http.get<Horse[]>(baseUri, { params: httpParams })
+      .pipe(map(hs => hs.map(this.fixHorseDate)));
+  }
+
   create(horse: HorseCreate): Observable<Horse> {
-    console.log(horse);
-    // Cast the object to any, so that we can circumvent the type checker.
-    // We _need_ the date to be a string here, and just passing the object with the
-    // “type error” to the HTTP client is unproblematic
     (horse as any).dateOfBirth = formatIsoDate(horse.dateOfBirth);
-
-    return this.http.post<Horse>(
-      baseUri,
-      horse
-    ).pipe(
-      map(this.fixHorseDate)
-    );
-  }
-
-  private fixHorseDate(horse: Horse): Horse {
-    // Parse the string to a Date
-    horse.dateOfBirth = new Date(horse.dateOfBirth as unknown as string);
-    return horse;
+    return this.http.post<Horse>(baseUri, horse).pipe(map(this.fixHorseDate));
   }
 
   getById(id: number): Observable<Horse> {
@@ -70,5 +48,8 @@ export class HorseService {
     return this.http.delete<void>(`${baseUri}/${id}`);
   }
 
-
+  private fixHorseDate(horse: Horse): Horse {
+    horse.dateOfBirth = new Date(horse.dateOfBirth as unknown as string);
+    return horse;
+  }
 }

@@ -12,14 +12,20 @@ import {OwnerService} from 'src/app/service/owner.service';
 import {formatIsoDate} from "../../../utils/date-helper";
 import {NgClass} from "@angular/common";
 import { ConfirmDeleteDialogComponent } from 'src/app/component/confirm-delete-dialog/confirm-delete-dialog.component';
-import {Horse} from 'src/app/dto/horse';
+//import {Horse} from 'src/app/dto/horse';
 import { CommonModule } from '@angular/common';
+import { Horse } from 'src/app/dto/horse';
+
+
+
 
 
 export enum HorseCreateEditMode {
   create,
   edit
 }
+
+
 
 @Component({
   selector: 'app-horse-create-edit',
@@ -35,6 +41,9 @@ export enum HorseCreateEditMode {
   styleUrls: ['./horse-create-edit.component.scss']
 })
 export class HorseCreateEditComponent implements OnInit {
+  motherSelection: Horse | null = null;
+  fatherSelection: Horse | null = null;
+
   Sex = Sex;
   HorseCreateEditMode = HorseCreateEditMode;
   mode: HorseCreateEditMode = HorseCreateEditMode.create;
@@ -131,6 +140,52 @@ export class HorseCreateEditComponent implements OnInit {
     (input: string): Observable<never[]> =>
       this.ownerSuggestions(input) as unknown as Observable<never[]>;
 
+  motherSuggestions = (input: string): Observable<Horse[]> => {
+    if (input.trim() === '') return of([]);
+    return this.service.search({
+      name: input,
+      sex: Sex.female,
+      bornBefore: this.horseBirthDateIsSet ? this.horse.dateOfBirth : undefined,
+      limit: 5
+    });
+  };
+
+  fatherSuggestions = (input: string): Observable<Horse[]> => {
+    if (input.trim() === '') return of([]);
+    return this.service.search({
+      name: input,
+      sex: Sex.male,
+      bornBefore: this.horseBirthDateIsSet ? this.horse.dateOfBirth : undefined,
+      limit: 5
+    });
+  };
+
+
+  public formatHorseLabel(h: Horse | null | undefined): string {
+    return h ? `${h.name} (${formatIsoDate(h.dateOfBirth)})` : '';
+  }
+  readonly parentFormatter = (h: Horse | null | undefined) => this.formatHorseLabel(h);
+
+  private preloadParentsIfAny(): void {
+    if (this.horse.motherId) {
+      this.service.getById(this.horse.motherId).subscribe(m => this.motherSelection = m);
+    }
+    if (this.horse.fatherId) {
+      this.service.getById(this.horse.fatherId).subscribe(f => this.fatherSelection = f);
+    }
+  }
+
+
+// Wrapper für das <app-autocomplete>
+  readonly motherSuggestionsForAuto =
+    (input: string): Observable<never[]> =>
+      this.motherSuggestions(input) as unknown as Observable<never[]>;
+
+  readonly fatherSuggestionsForAuto =
+    (input: string): Observable<never[]> =>
+      this.fatherSuggestions(input) as unknown as Observable<never[]>;
+
+
 
   ngOnInit(): void {
     // Modus direkt aus den Route-Daten lesen (siehe app.routes.ts)
@@ -143,6 +198,7 @@ export class HorseCreateEditComponent implements OnInit {
           next: horse => {
             this.horse = horse;
             this.horseBirthDateIsSet = true;
+            this.preloadParentsIfAny();
           },
           error: err => {
             this.notification.error(
@@ -165,6 +221,7 @@ export class HorseCreateEditComponent implements OnInit {
             next: horse => {
               this.horse = horse;
               this.horseBirthDateIsSet = true;
+              this.preloadParentsIfAny();
             },
             error: err => {
               this.notification.error(
@@ -238,6 +295,8 @@ export class HorseCreateEditComponent implements OnInit {
           dateOfBirth: this.horse.dateOfBirth,
           sex: this.horse.sex,
           ownerId: this.horse.owner?.id ?? null,
+          motherId: this.motherSelection?.id ?? null,
+          fatherId: this.fatherSelection?.id ?? null,
         });
         break;
       }
@@ -249,6 +308,8 @@ export class HorseCreateEditComponent implements OnInit {
           dateOfBirth: this.horse.dateOfBirth,
           sex: this.horse.sex,
           ownerId: this.horse.owner?.id ?? null,
+          motherId: this.motherSelection?.id ?? null,
+          fatherId: this.fatherSelection?.id ?? null,
         });
         break;
       }

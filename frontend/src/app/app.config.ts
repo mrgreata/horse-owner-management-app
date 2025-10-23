@@ -1,6 +1,7 @@
 import { registerLocaleData } from '@angular/common';
 import { provideHttpClient } from '@angular/common/http';
 import localeDe from '@angular/common/locales/de';
+
 import {
   ApplicationConfig,
   DEFAULT_CURRENCY_CODE,

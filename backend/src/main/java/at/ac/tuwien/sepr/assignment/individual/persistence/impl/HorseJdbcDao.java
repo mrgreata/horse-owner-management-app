@@ -47,16 +47,18 @@ public class HorseJdbcDao implements HorseDao {
            description = :description,
            date_of_birth = :date_of_birth,
            sex = :sex,
-           owner_id = :owner_id
+           owner_id = :owner_id,
+           mother_id = :mother_id,
+           father_id = :father_id
      WHERE id = :id
       """;
 
 
   private static final String SQL_INSERT = """
-  INSERT INTO horse (name, description, date_of_birth, sex, owner_id, image_path, image_content_type)
-  VALUES (?, ?, ?, ?, ?, ?, ?)
+  INSERT INTO horse
+    (name, description, date_of_birth, sex, owner_id, image_path, image_content_type, mother_id, father_id)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       """;
-
 
 
 
@@ -96,6 +98,19 @@ public class HorseJdbcDao implements HorseDao {
       } else {
         ps.setString(7, horse.imageContentType());
       }
+
+      // US4
+      if (horse.motherId() == null) {
+        ps.setNull(8, java.sql.Types.BIGINT);
+      } else {
+        ps.setLong(8, horse.motherId());
+      }
+      if (horse.fatherId() == null) {
+        ps.setNull(9, java.sql.Types.BIGINT);
+      } else {
+        ps.setLong(9, horse.fatherId());
+      }
+
       return ps;
     }, keyHolder);
 
@@ -108,7 +123,9 @@ public class HorseJdbcDao implements HorseDao {
             horse.sex(),
             horse.ownerId(),
             horse.imagePath(),
-            horse.imageContentType()
+            horse.imageContentType(),
+            horse.motherId(),
+            horse.fatherId()
     );
   }
 
@@ -158,6 +175,8 @@ public class HorseJdbcDao implements HorseDao {
             .param("date_of_birth", horse.dateOfBirth())
             .param("sex", horse.sex().toString())
             .param("owner_id", horse.ownerId())
+            .param("mother_id", horse.motherId())
+            .param("father_id", horse.fatherId())
             .update();
 
     if (updated == 0) {
@@ -174,7 +193,9 @@ public class HorseJdbcDao implements HorseDao {
             horse.sex(),
             horse.ownerId(),
             current.imagePath(),
-            current.imageContentType()
+            current.imageContentType(),
+            horse.motherId(),
+            horse.fatherId()
     );
   }
 
@@ -189,7 +210,9 @@ public class HorseJdbcDao implements HorseDao {
             Sex.valueOf(result.getString("sex")),
             result.getObject("owner_id", Long.class),
             result.getString("image_path"),
-            result.getString("image_content_type")
+            result.getString("image_content_type"),
+            result.getObject("mother_id", Long.class),
+            result.getObject("father_id", Long.class)
     );
   }
 

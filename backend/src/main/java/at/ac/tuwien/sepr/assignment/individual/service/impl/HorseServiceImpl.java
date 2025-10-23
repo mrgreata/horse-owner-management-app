@@ -77,20 +77,32 @@ public class HorseServiceImpl implements HorseService {
   }
 
   @Override
-  public HorseDetailDto create(HorseCreateDto dto) throws ValidationException, ConflictException {
+  public HorseDetailDto create(HorseCreateDto dto) throws ValidationException, ConflictException, NotFoundException {
     LOG.trace("create({})", dto);
     validator.validateForCreate(dto);
 
+    // Owner prüfen (du hast hier bisher ConflictException verwendet – ok.
+    // Wenn du TS27 maximal genau auslegen willst, kannst du stattdessen NotFoundException werfen.)
     if (dto.ownerId() != null) {
       try {
         ownerService.getById(dto.ownerId());
       } catch (NotFoundException e) {
+        // Entweder so lassen …
         throw new ConflictException(
                 "Owner does not exist",
                 List.of("ownerId %d does not exist".formatted(dto.ownerId()))
         );
+        // … oder (empfohlen gemäß TS27) direkt weiterreichen:
+        // throw e;
       }
     }
+
+    // Eltern laden (falls angegeben) → NotFoundException, falls ID nicht existiert
+    Horse mother = (dto.motherId() == null) ? null : dao.getById(dto.motherId());
+    Horse father = (dto.fatherId() == null) ? null : dao.getById(dto.fatherId());
+
+    // Eltern-Regeln prüfen (unterschiedliches Geschlecht, keine Selbstreferenz, Alter)
+    validator.validateParents(dto.dateOfBirth(), null, mother, father);
 
     var entity = new Horse(
             null,
@@ -100,11 +112,15 @@ public class HorseServiceImpl implements HorseService {
             dto.sex(),
             dto.ownerId(),
             null,
-            null
+            null,
+            dto.motherId(),    // NEW
+            dto.fatherId()     // NEW
     );
+
     var saved = dao.insert(entity);
     return mapper.entityToDetailDto(saved, ownerMapForSingleId(saved.ownerId()));
   }
+
 
 
 
@@ -164,15 +180,46 @@ public class HorseServiceImpl implements HorseService {
 
 
   @Override
-  public HorseDetailDto update(HorseUpdateDto horse) throws NotFoundException, ValidationException, ConflictException {
-    LOG.trace("update({})", horse);
-    validator.validateForUpdate(horse);
+  public HorseDetailDto update(HorseUpdateDto dto)
+          throws NotFoundException, ValidationException, ConflictException {
+    LOG.trace("update({})", dto);
+    validator.validateForUpdate(dto);
 
-    var updatedHorse = dao.update(horse);
+    // Zielpferd existiert?
+    var existing = dao.getById(dto.id()); // wirft NotFoundException → 404
+
+    // Owner prüfen (optional – analog zu create)
+    if (dto.ownerId() != null) {
+      try {
+        ownerService.getById(dto.ownerId());
+      } catch (NotFoundException e) {
+        // entweder Conflict wie bisher …
+        throw new ConflictException(
+                "Owner does not exist",
+                List.of("ownerId %d does not exist".formatted(dto.ownerId()))
+        );
+        // … oder TS27-konform einfach weiterreichen:
+        // throw e;
+      }
+    }
+
+    // Eltern laden (falls gesetzt)
+    Horse mother = (dto.motherId() == null) ? null : dao.getById(dto.motherId());
+    Horse father = (dto.fatherId() == null) ? null : dao.getById(dto.fatherId());
+
+    // Eltern-Regeln prüfen
+    validator.validateParents(dto.dateOfBirth(), dto.id(), mother, father);
+
+    var updatedHorse = dao.update(dto); // schreibt mother_id/father_id mit
     return mapper.entityToDetailDto(
-        updatedHorse,
-        ownerMapForSingleId(updatedHorse.ownerId()));
+            updatedHorse,
+            ownerMapForSingleId(updatedHorse.ownerId())
+    );
   }
+
+
+
+
 
 
   @Override
@@ -187,12 +234,14 @@ public class HorseServiceImpl implements HorseService {
 
   private Map<Long, OwnerDto> ownerMapForSingleId(Long ownerId) {
     try {
-      return ownerId == null
-          ? null
-          : Collections.singletonMap(ownerId, ownerService.getById(ownerId));
+      if (ownerId == null) {
+        return Collections.emptyMap(); // ← statt null zurückgeben
+      }
+      return Collections.singletonMap(ownerId, ownerService.getById(ownerId));
     } catch (NotFoundException e) {
-      throw new FatalException("Owner %d referenced by horse not found".formatted(ownerId));
+      throw new FatalException("Owner %d referenced by horse not found".formatted(ownerId), e);
     }
   }
+
 
 }

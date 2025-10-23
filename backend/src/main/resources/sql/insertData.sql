@@ -20,3 +20,12 @@ DELETE FROM horse where id < 0;
 INSERT INTO horse (id, name, description, date_of_birth, sex)
 VALUES (-1, 'Wendy', 'The famous one!', '2012-12-12', 'FEMALE');
 
+-- Einige Elternbeziehungen (nur Beispiele; IDs an deine Seeds anpassen)
+-- -1 Wendy (F) ist Mutter von -10; -7 Max (M) ist Vater von -10
+INSERT INTO horse (id, name, description, date_of_birth, sex) VALUES
+    (-7, 'Max',    'Stallion', '2010-04-10', 'MALE'),
+    (-8, 'Bella',  'Mare',     '2011-06-20', 'FEMALE'),
+    (-9, 'Rocky',  'Stallion', '2013-09-12', 'MALE'),
+    (-10,'Candy',  'Foal',     '2016-05-03', 'FEMALE');
+
+UPDATE horse SET mother_id = -1, father_id = -7 WHERE id = -10;  -- Wendy & Max → Candy

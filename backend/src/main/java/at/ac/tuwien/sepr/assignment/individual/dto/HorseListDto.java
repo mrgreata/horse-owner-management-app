@@ -18,6 +18,8 @@ public record HorseListDto(
         String description,
         LocalDate dateOfBirth,
         Sex sex,
-        @JsonInclude(JsonInclude.Include.NON_NULL)   // <— auch hier
-        OwnerDto owner
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        OwnerDto owner,
+        Long motherId,
+        Long fatherId
 ) {}

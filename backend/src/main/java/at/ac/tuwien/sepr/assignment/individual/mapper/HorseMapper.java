@@ -42,7 +42,9 @@ public class HorseMapper {
         horse.description(),
         horse.dateOfBirth(),
         horse.sex(),
-        getOwner(horse, owners)
+        getOwner(horse, owners),
+            horse.motherId(),
+            horse.fatherId()
     );
   }
 
@@ -68,7 +70,9 @@ public class HorseMapper {
         horse.description(),
         horse.dateOfBirth(),
         horse.sex(),
-        getOwner(horse, owners)
+        getOwner(horse, owners),
+            horse.motherId(),
+            horse.fatherId()
     );
   }
 

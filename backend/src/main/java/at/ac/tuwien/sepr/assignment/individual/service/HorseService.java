@@ -23,7 +23,9 @@ public interface HorseService {
    */
   Stream<HorseListDto> allHorses();
 
-  HorseDetailDto create(HorseCreateDto dto) throws ValidationException, ConflictException;
+  HorseDetailDto create(HorseCreateDto dto)
+          throws ValidationException, ConflictException, NotFoundException;
+
 
 
   /**

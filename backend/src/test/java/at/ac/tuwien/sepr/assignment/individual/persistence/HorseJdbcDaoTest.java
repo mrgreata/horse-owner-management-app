@@ -23,6 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+
 @ActiveProfiles("test")
 @SpringBootTest
 class HorseJdbcDaoTest {
@@ -46,7 +49,11 @@ class HorseJdbcDaoTest {
     var saved = dao.insert(new Horse(
             null, "Bella", "desc",
             LocalDate.of(2019, 3, 10), Sex.FEMALE,
-            null, null, null
+            null, // ownerId
+            null, // imagePath
+            null, // imageContentType
+            null, // motherId
+            null  // fatherId
     ));
 
     var loaded = dao.getById(saved.id());
@@ -61,16 +68,20 @@ class HorseJdbcDaoTest {
     var saved = dao.insert(new Horse(
             null, "Amy", null,
             LocalDate.parse("2015-05-10"), Sex.FEMALE,
-            null, null, null
+            null, // ownerId
+            null, // imagePath
+            null, // imageContentType
+            null, // motherId
+            null  // fatherId
     ));
     long ownerId = insertOwner("Ann", "Smith");
 
     var withOwner = dao.update(new HorseUpdateDto(
-            saved.id(), "Amy", null, LocalDate.parse("2015-05-10"), Sex.FEMALE, ownerId));
+            saved.id(), "Amy", null, LocalDate.parse("2015-05-10"), Sex.FEMALE, ownerId, null, null));
     assertEquals(ownerId, withOwner.ownerId());
 
     var removedOwner = dao.update(new HorseUpdateDto(
-            saved.id(), "Amy", null, LocalDate.parse("2015-05-10"), Sex.FEMALE, null));
+            saved.id(), "Amy", null, LocalDate.parse("2015-05-10"), Sex.FEMALE, null, null, null));
     assertThat(removedOwner.ownerId()).isNull();
   }
 
@@ -79,7 +90,11 @@ class HorseJdbcDaoTest {
     var saved = dao.insert(new Horse(
             null, "Cara", null,
             LocalDate.parse("2016-09-09"), Sex.FEMALE,
-            null, null, null
+            null, // ownerId
+            null, // imagePath
+            null, // imageContentType
+            null, // motherId
+            null  // fatherId
     ));
 
     dao.delete(saved.id());
@@ -118,5 +133,44 @@ class HorseJdbcDaoTest {
             .isInstanceOf(NotFoundException.class)
             .hasMessageContaining("999999");
   }
+
+  @Test
+  void insert_withParents_persistsAndReadsParents() throws NotFoundException {
+    // arrange: mother, father, child
+    jdbc.update("INSERT INTO horse(name,date_of_birth,sex) VALUES(?,?,?)",
+            "Mare", java.sql.Date.valueOf("2010-01-01"), "FEMALE");
+    Long motherId = jdbc.queryForObject("SELECT MAX(id) FROM horse", Long.class);
+
+    jdbc.update("INSERT INTO horse(name,date_of_birth,sex) VALUES(?,?,?)",
+            "Stallion", java.sql.Date.valueOf("2010-01-02"), "MALE");
+    Long fatherId = jdbc.queryForObject("SELECT MAX(id) FROM horse", Long.class);
+
+    var child = new Horse(null, "Foal", null, LocalDate.parse("2016-05-03"), Sex.FEMALE,
+            null, null, null, motherId, fatherId);
+    var inserted = dao.insert(child);
+
+    var reloaded = dao.getById(inserted.id()); // wirft NotFoundException
+    assertThat(reloaded.motherId()).isEqualTo(motherId);
+    assertThat(reloaded.fatherId()).isEqualTo(fatherId);
+  }
+
+
+  @Test
+  void delete_parent_setsChildFkNull() throws Exception {
+    jdbc.update("INSERT INTO horse(name,date_of_birth,sex) VALUES(?,?,?)",
+            "M", java.sql.Date.valueOf("2010-01-01"), "FEMALE");
+    Long motherId = jdbc.queryForObject("SELECT MAX(id) FROM horse", Long.class);
+
+    jdbc.update("INSERT INTO horse(name,date_of_birth,sex,mother_id) VALUES(?,?,?,?)",
+            "C", java.sql.Date.valueOf("2016-01-01"), "FEMALE", motherId);
+    Long childId = jdbc.queryForObject("SELECT MAX(id) FROM horse", Long.class);
+
+    dao.delete(motherId); // ON DELETE SET NULL sollte greifen
+
+    Long fk = jdbc.queryForObject("SELECT mother_id FROM horse WHERE id=?", Long.class, childId);
+    assertThat(fk).isNull();
+  }
+
+
 
 }

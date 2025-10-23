@@ -24,5 +24,7 @@ public record Horse(
         Sex sex,
         Long ownerId,
         String imagePath,
-        String imageContentType
+        String imageContentType,
+        Long motherId,   // NEW
+        Long fatherId    // NEW
 ) { }
