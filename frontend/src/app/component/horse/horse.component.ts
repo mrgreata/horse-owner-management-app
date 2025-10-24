@@ -53,10 +53,8 @@ export class HorseComponent implements OnInit {
       });
   }
 
-  ownerName(owner: Owner | null): string {
-    return owner
-      ? `${owner.firstName} ${owner.lastName}`
-      : '';
+  ownerName(owner: Owner | null | undefined): string {
+    return owner?.name?.trim() || '';
   }
 
   dateOfBirthAsLocaleDate(horse: Horse): string {

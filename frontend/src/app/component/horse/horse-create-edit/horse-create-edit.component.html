@@ -77,18 +77,18 @@
         <label for="horseOwner" class="col-form-label text-md-end text-muted col-md-2 col-lg-4">
           Owner
         </label>
-        <app-autocomplete
-          id="horseOwner"
-          name="horseOwner"
-          class="col-md-10 col-lg-8"
-          textInputClass="form-control"
-          [ngModelOptions]="{ standalone: true }"
-          [(ngModel)]="horse.owner"
-          [suggestions]="ownerSuggestionsForAuto"
-          [formatModel]="ownerFormatter">
-        </app-autocomplete>
-
-
+        <div class="col-md-10 col-lg-8">
+          <app-autocomplete
+            id="horseOwner"
+            name="horseOwner"
+            textInputClass="form-control"
+            [ngModelOptions]="{ standalone: true }"
+            [(ngModel)]="horse.owner"
+            [suggestions]="ownerSuggestionsForAuto"
+            [formatModel]="ownerFormatter"
+            valueNeedsToMatchSuggestion="true">
+          </app-autocomplete>
+        </div>
 
       </div>
     </div>

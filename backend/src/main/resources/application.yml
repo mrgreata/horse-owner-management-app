@@ -38,3 +38,4 @@ server:
 app:
   storage:
     horseImageDir: ./data/horse-images
+

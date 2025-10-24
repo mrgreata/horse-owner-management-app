@@ -20,6 +20,8 @@ import { Horse } from 'src/app/dto/horse';
 
 
 
+
+
 export enum HorseCreateEditMode {
   create,
   edit
@@ -252,7 +254,7 @@ export class HorseCreateEditComponent implements OnInit {
 
 
   public formatOwnerName(owner: Owner | null | undefined): string {
-    return owner ? `${owner.firstName} ${owner.lastName}` : '';
+    return owner?.name ?? '';
   }
   readonly ownerFormatter = (o: Owner | null | undefined) => this.formatOwnerName(o);
 

@@ -110,6 +110,13 @@
           <td>{{ ownerName(horse.owner || null) || '—' }}</td>
           <td>
             <div class="btn-group">
+
+              <!-- View / Details -->
+              <a class="btn btn-sm btn-outline-secondary"
+                 [routerLink]="['/horses', horse.id]"
+                 aria-label="View horse details">
+                <i class="bi bi-eye"></i>
+              </a>
               <!-- Edit -->
               <a class="btn btn-sm btn-outline-primary"
                  [routerLink]="['/horses', horse.id, 'edit']"

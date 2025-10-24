@@ -1,0 +1,41 @@
+<div class="container mt-3">
+  @if (loading) {
+    <p>Loading horse ...</p>
+  } @else if (error) {
+    <div class="alert alert-danger">{{ error }}</div>
+  } @else if (horse) {
+    <h2>{{ horse.name }}</h2>
+    <p><strong>Description:</strong> {{ horse.description || '—' }}</p>
+    <p><strong>Date of birth:</strong> {{ localeDate() }}</p>
+    <p><strong>Sex:</strong> {{ horse.sex === 'FEMALE' ? 'Female' : 'Male' }}</p>
+    <p><strong>Owner:</strong> {{ horse.owner?.name || '—' }}</p>
+
+    <div>
+      <strong>Parents:</strong>
+      @if (horse.motherId) {
+        <a [routerLink]="['/horses', horse.motherId]">Mother</a>
+      } @else { — }
+      |
+      @if (horse.fatherId) {
+        <a [routerLink]="['/horses', horse.fatherId]">Father</a>
+      } @else { — }
+    </div>
+
+    <div class="mt-3 btn-group">
+      <a class="btn btn-primary" [routerLink]="['/horses', horse.id, 'edit']">Edit</a>
+
+      <!-- Delete mit Bestätigung -->
+      <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#delete-dialog">
+        Delete
+      </button>
+
+      <a class="btn btn-secondary" routerLink="/horses">Back</a>
+    </div>
+
+    <app-confirm-delete-dialog
+      id="delete-dialog"
+      [deleteWhat]="horse.name"
+      (confirm)="deleteHorse()">
+    </app-confirm-delete-dialog>
+  }
+</div>

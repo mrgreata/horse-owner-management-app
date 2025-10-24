@@ -1,9 +1,8 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';            // 👈 map importieren
 import { environment } from 'src/environments/environment';
 import { Owner } from '../dto/owner';
-
 
 const baseUri = environment.backendUrl + '/owners';
 
@@ -15,12 +14,23 @@ export class OwnerService {
     const params = new HttpParams()
       .set('name', name)
       .set('limit', String(limit));
-    return this.http.get<Owner[]>(baseUri, { params });
-  }
 
+    return this.http.get<any[]>(baseUri, { params }).pipe(
+      map(rows => rows.map(o => ({
+        id: o.id,
+        name: [o.firstName, o.lastName].filter(Boolean).join(' '),  // 👈 hier bauen wir name
+        email: o.email
+      } as Owner)))
+    );
+  }
 
   getById(id: number): Observable<Owner> {
-    return this.http.get<Owner>(`${baseUri}/${id}`);
+    return this.http.get<any>(`${baseUri}/${id}`).pipe(
+      map(o => ({
+        id: o.id,
+        name: [o.firstName, o.lastName].filter(Boolean).join(' '),  // 👈 ebenso hier
+        email: o.email
+      } as Owner))
+    );
   }
-
 }

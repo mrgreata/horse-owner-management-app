@@ -5,7 +5,6 @@ import {environment} from 'src/environments/environment';
 import {Horse, HorseCreate, HorseSearch} from '../dto/horse';
 import {formatIsoDate} from '../utils/date-helper';
 
-
 const baseUri = environment.backendUrl + '/horses';
 
 @Injectable({ providedIn: 'root' })
@@ -13,7 +12,7 @@ export class HorseService {
   constructor(private http: HttpClient) {}
 
   getAll(): Observable<Horse[]> {
-    return this.http.get<Horse[]>(baseUri).pipe(map(hs => hs.map(this.fixHorseDate)));
+    return this.http.get<any[]>(baseUri).pipe(map(hs => hs.map(this.fixHorse)));
   }
 
   /** Suche mit kombinierbaren Parametern (für Autocomplete Mother/Father wichtig) */
@@ -26,30 +25,42 @@ export class HorseService {
     if (params.limit != null) httpParams = httpParams.set('limit', String(params.limit));
     if (params.bornBefore) httpParams = httpParams.set('bornBefore', formatIsoDate(params.bornBefore));
 
-    return this.http.get<Horse[]>(baseUri, { params: httpParams })
-      .pipe(map(hs => hs.map(this.fixHorseDate)));
+    return this.http.get<any[]>(baseUri, { params: httpParams })
+      .pipe(map(hs => hs.map(this.fixHorse)));
   }
 
   create(horse: HorseCreate): Observable<Horse> {
     (horse as any).dateOfBirth = formatIsoDate(horse.dateOfBirth);
-    return this.http.post<Horse>(baseUri, horse).pipe(map(this.fixHorseDate));
+    return this.http.post<any>(baseUri, horse).pipe(map(this.fixHorse));
   }
 
   getById(id: number): Observable<Horse> {
-    return this.http.get<Horse>(`${baseUri}/${id}`).pipe(map(this.fixHorseDate));
+    return this.http.get<any>(`${baseUri}/${id}`).pipe(map(this.fixHorse));
   }
 
   update(id: number, horse: HorseCreate): Observable<Horse> {
     (horse as any).dateOfBirth = formatIsoDate(horse.dateOfBirth);
-    return this.http.put<Horse>(`${baseUri}/${id}`, horse).pipe(map(this.fixHorseDate));
+    return this.http.put<any>(`${baseUri}/${id}`, horse).pipe(map(this.fixHorse));
   }
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${baseUri}/${id}`);
   }
 
-  private fixHorseDate(horse: Horse): Horse {
-    horse.dateOfBirth = new Date(horse.dateOfBirth as unknown as string);
-    return horse;
-  }
+  /** Normalisiert Datum + Owner (first/last -> name) */
+  private fixHorse = (raw: any): Horse => {
+    const owner = raw.owner
+      ? {
+        id: raw.owner.id,
+        name: raw.owner.name ?? [raw.owner.firstName, raw.owner.lastName].filter(Boolean).join(' '),
+        email: raw.owner.email
+      }
+      : null;
+
+    return {
+      ...raw,
+      owner,
+      dateOfBirth: new Date(raw.dateOfBirth as string)
+    } as Horse;
+  };
 }
