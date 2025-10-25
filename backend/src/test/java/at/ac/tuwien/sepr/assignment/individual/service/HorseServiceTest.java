@@ -20,9 +20,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
 import at.ac.tuwien.sepr.assignment.individual.dto.HorseUpdateDto;
+import at.ac.tuwien.sepr.assignment.individual.dto.HorseListDto;
+import at.ac.tuwien.sepr.assignment.individual.dto.HorseSearchDto;
+import org.junit.jupiter.api.BeforeEach;
+import java.util.List;
 
 
-@ActiveProfiles({"test", "datagen"})
+
+
+@ActiveProfiles("test")
 @SpringBootTest
 class HorseServiceTest {
 
@@ -34,6 +40,11 @@ class HorseServiceTest {
 
   @Test
   void getAllReturnsAllStoredHorses() {
+
+    jdbc.update("INSERT INTO horse(name, date_of_birth, sex) VALUES (?,?,?)",
+            "Any", Date.valueOf("2010-01-01"), "FEMALE");
+
+
     var horses = horseService.allHorses().toList();
 
     assertThat(horses).isNotEmpty();
@@ -179,6 +190,63 @@ class HorseServiceTest {
             name, Date.valueOf(dob), sex);
     return jdbc.queryForObject("SELECT MAX(id) FROM horse", Long.class);
   }
+
+  // ----- US6 ------
+
+  @BeforeEach
+  void clean() {
+    jdbc.update("DELETE FROM horse");
+    jdbc.update("DELETE FROM owner");
+  }
+  @Test
+  void search_ownerNameFilters_andOwnerIsMappedInListDto() {
+    // Arrange
+    jdbc.update("INSERT INTO owner (id, first_name, last_name) VALUES (200, 'Anna','Smith')");
+    jdbc.update("INSERT INTO owner (id, first_name, last_name) VALUES (201, 'Bob','Jones')");
+    jdbc.update("""
+    INSERT INTO horse (id, name, description, date_of_birth, sex, owner_id)
+    VALUES (10, 'Comet', 'sprinter', '2018-01-01', 'MALE', 200)
+        """);
+    jdbc.update("""
+    INSERT INTO horse (id, name, description, date_of_birth, sex, owner_id)
+    VALUES (11, 'Aurora', 'calm mare', '2010-07-07', 'FEMALE', 201)
+        """);
+
+    // Act
+    List<HorseListDto> result = horseService.search(
+            new HorseSearchDto(null, null, null, null, "Anna", null)
+    );
+
+    // Assert
+    assertThat(result).hasSize(1);
+    HorseListDto dto = result.getFirst();
+    assertThat(dto.name()).isEqualTo("Comet");
+    assertThat(dto.owner()).isNotNull();
+    assertThat(dto.owner().firstName()).isEqualTo("Anna");
+    assertThat(dto.owner().lastName()).isEqualTo("Smith");
+  }
+
+  @Test
+  void search_combinedFilters_work() {
+    // Arrange
+    jdbc.update("INSERT INTO owner (id, first_name, last_name) VALUES (210, 'X','Y')");
+    jdbc.update("""
+    INSERT INTO horse (id, name, description, date_of_birth, sex, owner_id)
+    VALUES (20, 'Stardust', 'calm mare', '2010-07-07', 'FEMALE', 210)
+        """);
+    jdbc.update("""
+    INSERT INTO horse (id, name, description, date_of_birth, sex, owner_id)
+    VALUES (21, 'Starwind', 'fast', '2015-05-10', 'MALE', 210)
+        """);
+
+    // Act
+    var criteria = new HorseSearchDto("star", "calm", LocalDate.parse("2012-01-01"), Sex.FEMALE, "X", null);
+    var result = horseService.search(criteria);
+
+    // Assert
+    assertThat(result).extracting(HorseListDto::name).containsExactly("Stardust");
+  }
+
 
 
 

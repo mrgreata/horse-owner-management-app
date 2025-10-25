@@ -32,10 +32,16 @@ import org.springframework.stereotype.Service;
 
 import org.springframework.dao.DataAccessException;
 
+import at.ac.tuwien.sepr.assignment.individual.dto.HorseSearchDto;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+
 
 
 /**
- * Implementation of {@link HorseService} for handling image storage and retrieval.
+ * Implementation of {@link HorseService}.
  */
 @Service
 public class HorseServiceImpl implements HorseService {
@@ -242,6 +248,35 @@ public class HorseServiceImpl implements HorseService {
       throw new FatalException("Owner %d referenced by horse not found".formatted(ownerId), e);
     }
   }
+
+  @Override
+  public List<HorseListDto> search(HorseSearchDto searchCriteria) {
+    LOG.trace("search({})", searchCriteria);
+
+    // 1) DAO-Abfrage
+    List<Horse> horses = dao.search(searchCriteria);
+
+    // 2) Owner der Treffer vorab in einem Rutsch laden (Performance, TS25/30)
+    var ownerIds = horses.stream()
+            .map(Horse::ownerId)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toUnmodifiableSet());
+
+    Map<Long, OwnerDto> ownerMap;
+    try {
+      ownerMap = ownerService.getAllById(ownerIds);
+    } catch (NotFoundException e) {
+      // dürfte nicht passieren, falls DB konsistent ist; Fatal -> 500
+      throw new FatalException("Horse refers to non-existing owner", e);
+    }
+
+    // 3) Mapping → ListDto inkl. Ownername
+    return horses.stream()
+            .map(h -> mapper.entityToListDto(h, ownerMap))
+            .toList();
+  }
+
+
 
 
 }

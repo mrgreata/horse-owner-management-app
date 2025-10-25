@@ -4,6 +4,7 @@ import at.ac.tuwien.sepr.assignment.individual.type.Sex;
 import java.time.LocalDate;
 import org.springframework.format.annotation.DateTimeFormat;
 
+
 /**
  * DTO to bundle the query parameters used in searching horses.
  * Each field can be null, in which case this field is not filtered by.

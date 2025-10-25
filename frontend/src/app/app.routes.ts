@@ -1,33 +1,37 @@
-import {Routes} from '@angular/router';
-
-import {
-  HorseCreateEditComponent,
-  HorseCreateEditMode
-} from './component/horse/horse-create-edit/horse-create-edit.component';
-import {HorseComponent} from './component/horse/horse.component';
-import {HorseDetailComponent} from './component/horse/horse-detail/horse-detail.component'; // 👈 NEU importieren
-
-
-
-
+import { Routes } from '@angular/router';
+import { HorseCreateEditComponent, HorseCreateEditMode } from './component/horse/horse-create-edit/horse-create-edit.component';
+import { HorseComponent } from './component/horse/horse.component';
 
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'horses' },  // <— hinzufügen
+  { path: '', pathMatch: 'full', redirectTo: 'horses' },
+
   {
-    path: 'horses', children: [
+    path: 'horses',
+    children: [
       { path: '', component: HorseComponent },
+
       { path: 'create', component: HorseCreateEditComponent, data: { mode: HorseCreateEditMode.create } },
+
+      // Detail (lazy)
       {
         path: ':id',
         loadComponent: () =>
           import('./component/horse/horse-detail/horse-detail.component')
             .then(m => m.HorseDetailComponent)
       },
+
+      // Edit
       { path: ':id/edit', component: HorseCreateEditComponent, data: { mode: HorseCreateEditMode.edit } },
 
+      // Stammbaum (lazy) – Pfad ggf. an Dateinamen anpassen (bei dir: horse-tree.ts)
+      {
+        path: ':id/tree',
+        loadComponent: () =>
+          import('./component/horse/horse-tree/horse-tree')
+            .then(m => m.HorseTreeComponent)
+      },
     ]
   },
+
   { path: '**', redirectTo: 'horses' },
 ];
-
-

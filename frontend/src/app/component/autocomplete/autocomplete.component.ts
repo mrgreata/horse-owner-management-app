@@ -1,7 +1,7 @@
 import { KeyValuePipe, NgClass } from '@angular/common';
 import { Component, Input, OnInit } from '@angular/core';
 import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/forms';
-import { debounceTime, of, Subject, switchMap, tap } from 'rxjs';
+import {debounceTime, Observable, of, Subject, switchMap, tap} from 'rxjs';
 
 /** Component for an autocomplete input, similar to a combo box,
  * that lets the user search a list of options by entering a search text.
@@ -28,13 +28,14 @@ import { debounceTime, of, Subject, switchMap, tap } from 'rxjs';
     },
   ]
 })
-export class AutocompleteComponent<T> implements OnInit, ControlValueAccessor {
+export class AutocompleteComponent<T = any> implements OnInit, ControlValueAccessor {
   static counter = 0;
 
   // See documentation of NgClass for comparison
   // <https://angular.io/api/common/NgClass>
   @Input() textInputClass: string | string[] | Set<string> | { [klass: string]: any } = [];
   @Input() datalistClass: string | string[] | Set<string> | { [klass: string]: any } = [];
+
 
   dataListId: string;
   inputText = '';
@@ -62,13 +63,16 @@ export class AutocompleteComponent<T> implements OnInit, ControlValueAccessor {
    * These are displayed in the data list
    * and also used to check if input is valid when `valueNeedsToMatchSuggestion` is `true`.
    */
-  @Input() suggestions = (input: string) => of([]);
+  @Input()
+  suggestions: (input: string) => Observable<T[]> = () => of([] as T[]);
 
   /** Used to get a readable representation of the model value
    * for use in the text input field
    * and the data list options
    */
-  @Input() formatModel = (model: T | null) => (model as any).toString();
+  @Input()
+  formatModel: (model: T | null) => string = (m: T | null) =>
+    (m as any)?.toString?.() ?? '';
 
   // Dummy functions for the callback variables, so that we do not need to check,
   // if one was already registered

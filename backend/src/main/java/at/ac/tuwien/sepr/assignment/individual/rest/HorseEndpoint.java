@@ -26,6 +26,8 @@ import at.ac.tuwien.sepr.assignment.individual.exception.NotFoundException;
 import at.ac.tuwien.sepr.assignment.individual.exception.ValidationException;
 import at.ac.tuwien.sepr.assignment.individual.exception.ConflictException;
 
+import org.springframework.web.bind.annotation.ModelAttribute;
+
 
 @RestController
 @RequestMapping(path = HorseEndpoint.BASE_PATH, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -40,12 +42,23 @@ public class HorseEndpoint {
   }
 
   @GetMapping
-  public List<HorseListDto> searchHorses(HorseSearchDto searchParameters) {
+  public List<HorseListDto> searchHorses(@ModelAttribute HorseSearchDto searchParameters) {
     LOG.info("GET {}", BASE_PATH);
     LOG.debug("request parameters: {}", searchParameters);
-    // TODO (US6): searchParameters an Service weiterreichen
-    return service.allHorses().toList();
+
+    boolean noFilters = searchParameters == null
+            || (searchParameters.name() == null
+            && searchParameters.description() == null
+            && searchParameters.bornBefore() == null
+            && searchParameters.sex() == null
+            && searchParameters.ownerName() == null
+            && searchParameters.limit() == null);
+
+    return noFilters
+            ? service.allHorses().toList()
+            : service.search(searchParameters);
   }
+
 
   @GetMapping("{id}")
   public HorseDetailDto getById(@PathVariable("id") long id) throws NotFoundException {

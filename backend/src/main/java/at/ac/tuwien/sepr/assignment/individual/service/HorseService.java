@@ -10,12 +10,35 @@ import at.ac.tuwien.sepr.assignment.individual.exception.ValidationException;
 import java.util.stream.Stream;
 
 import at.ac.tuwien.sepr.assignment.individual.dto.HorseCreateDto;
+import java.util.List;
+import at.ac.tuwien.sepr.assignment.individual.dto.HorseSearchDto;
+
+
 
 
 /**
  * Service for working with horses.
  */
 public interface HorseService {
+
+  /**
+   * Search horses by optional, combinable criteria.
+   * Empty or null criteria fields are ignored; empty criteria returns all horses.
+   * Supported filters:
+   * <ul>
+   *   <li>name: substring match (case-insensitive)</li>
+   *   <li>description: substring match (case-insensitive)</li>
+   *   <li>bornBefore: horse date_of_birth &lt; given date</li>
+   *   <li>sex: exact match</li>
+   *   <li>ownerName: substring match over "firstName lastName" (case-insensitive)</li>
+   * </ul>
+   *
+   * @param searchCriteria criteria to apply
+   * @return matching horses
+   */
+  List<HorseListDto> search(HorseSearchDto searchCriteria);
+
+
   /**
    * Lists all horses stored in the system.
    *
@@ -30,14 +53,13 @@ public interface HorseService {
 
   /**
    * Updates the horse with the ID given in {@code horse}
-   * with the data given in {@code horse}
-   * in the persistent data store.
+   * with the data given in {@code horse} in the persistent data store.
    *
    * @param horse the horse to update
    * @return the updated horse
-   * @throws NotFoundException if the horse with given ID does not exist in the persistent data store
-   * @throws ValidationException if the update data given for the horse is in itself incorrect (description too long, no name, …)
-   * @throws ConflictException if the update data given for the horse is in conflict the data currently in the system (owner does not exist, …)
+   * @throws NotFoundException    if the horse with given ID does not exist
+   * @throws ValidationException  if the update data is invalid (e.g., no name, invalid date)
+   * @throws ConflictException    if the update conflicts with existing system state (e.g., owner does not exist)
    */
   HorseDetailDto update(HorseUpdateDto horse) throws NotFoundException, ValidationException, ConflictException;
 

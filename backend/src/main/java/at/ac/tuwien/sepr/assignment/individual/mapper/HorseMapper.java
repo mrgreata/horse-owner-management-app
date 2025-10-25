@@ -31,7 +31,7 @@ public class HorseMapper {
    * @return the converted {@link HorseListDto}
    */
   public HorseListDto entityToListDto(Horse horse, Map<Long, OwnerDto> owners) {
-    LOG.trace("entityToDto({})", horse);
+    LOG.trace("entityToDetailDto({})", horse);
     if (horse == null) {
       return null;
     }
@@ -59,7 +59,7 @@ public class HorseMapper {
   public HorseDetailDto entityToDetailDto(
       Horse horse,
       Map<Long, OwnerDto> owners) {
-    LOG.trace("entityToDto({})", horse);
+    LOG.trace("entityToListDto({})", horse);
     if (horse == null) {
       return null;
     }

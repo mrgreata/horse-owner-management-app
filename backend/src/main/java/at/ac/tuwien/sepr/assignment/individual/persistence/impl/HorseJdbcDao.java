@@ -24,6 +24,10 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 
+import at.ac.tuwien.sepr.assignment.individual.dto.HorseSearchDto;
+import java.util.ArrayList;
+
+
 
 /**
  * JDBC implementation of {@link HorseDao} for interacting with the database.
@@ -243,6 +247,56 @@ public class HorseJdbcDao implements HorseDao {
       throw new NotFoundException("No horse with ID %d found".formatted(id));
     }
   }
+
+  @Override
+  public List<Horse> search(HorseSearchDto searchCriteria) {
+    LOG.trace("search({})", searchCriteria);
+
+    StringBuilder sql = new StringBuilder("""
+      SELECT h.id,
+             h.name,
+             h.description,
+             h.date_of_birth,
+             h.sex,
+             h.owner_id,
+             h.image_path,
+             h.image_content_type,
+             h.mother_id,
+             h.father_id
+        FROM horse h
+        LEFT JOIN owner o ON h.owner_id = o.id
+       WHERE 1=1
+        """);
+
+    List<Object> params = new ArrayList<>();
+
+    if (searchCriteria.name() != null && !searchCriteria.name().isBlank()) {
+      sql.append(" AND LOWER(h.name) LIKE LOWER(?)");
+      params.add("%" + searchCriteria.name().trim() + "%");
+    }
+    if (searchCriteria.description() != null && !searchCriteria.description().isBlank()) {
+      sql.append(" AND LOWER(h.description) LIKE LOWER(?)");
+      params.add("%" + searchCriteria.description().trim() + "%");
+    }
+    if (searchCriteria.bornBefore() != null) {
+      sql.append(" AND h.date_of_birth < ?");
+      params.add(Date.valueOf(searchCriteria.bornBefore()));
+    }
+    if (searchCriteria.sex() != null) {
+      sql.append(" AND h.sex = ?");
+      params.add(searchCriteria.sex().toString());
+    }
+    if (searchCriteria.ownerName() != null && !searchCriteria.ownerName().isBlank()) {
+      sql.append(" AND LOWER(COALESCE(o.first_name,'') || ' ' || COALESCE(o.last_name,'')) LIKE LOWER(?)");
+      params.add("%" + searchCriteria.ownerName().trim() + "%");
+    }
+
+    sql.append(" ORDER BY h.name ASC");
+
+    return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> mapRow(rs, rowNum), params.toArray());
+  }
+
+
 
 
 

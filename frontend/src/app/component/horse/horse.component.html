@@ -24,9 +24,13 @@
 <!-- END SANITY CHECK BANNER -->
 
 <div class="d-flex flex-row w-auto">
-  <button class="btn btn-primary mr-1" (click)="reloadHorses()" aria-label="Reload horses">
+  <button class="btn btn-primary mr-1" (click)="searchHorses()" aria-label="Reload horses">
     <i class="bi bi-arrow-clockwise"></i>
     Reload
+  </button>
+  <button class="btn btn-outline-secondary ms-1" type="button" (click)="clearFilters()" aria-label="Clear filters">
+    <i class="bi bi-eraser"></i>
+    Clear
   </button>
   <span style="flex: 1"></span>
   <a class="btn btn-secondary" routerLink="create" aria-label="New horse">
@@ -35,7 +39,7 @@
   </a>
 </div>
 
-<form class="d-flex flex-row w-auto mb-3" (submit)="reloadHorses()">
+<form class="d-flex flex-row w-auto mb-3" (submit)="searchHorses()">
   <button type="submit" hidden>submit</button>
 
   <div class="flex-grow-2">
@@ -44,7 +48,8 @@
       type="text"
       id="searchHorseName"
       name="searchHorseName"
-      class="form-control">
+      class="form-control"
+      [(ngModel)]="search.name">
   </div>
 
   <div class="flex-grow-1 ms-1">
@@ -53,18 +58,21 @@
       type="text"
       id="searchHorseDescription"
       name="searchHorseDescription"
-      class="form-control">
+      class="form-control"
+      [(ngModel)]="search.description">
   </div>
 
   <div class="ms-1">
-    <label for="searchHorseDateOfBirth" class="col-form-label">Date of Birth</label>
+    <label for="searchHorseDateOfBirth" class="col-form-label">Born before</label>
     <input
       type="date"
       id="searchHorseDateOfBirth"
       name="searchHorseDateOfBirth"
       pattern="\d{4}-\d{2}-\d{2}"
       placeholder="yyyy-mm-dd"
-      class="form-control">
+      class="form-control"
+      [ngModel]="search.bornBefore ? (search.bornBefore | date:'yyyy-MM-dd') : null"
+      (ngModelChange)="onBornBeforeChange($event)">
   </div>
 
   <div class="ms-1">
@@ -72,10 +80,11 @@
     <select
       id="searchHorseSex"
       name="searchHorseSex"
-      class="form-select">
-      <option></option>
-      <option value="FEMALE">Female</option>
-      <option value="MALE">Male</option>
+      class="form-select"
+      [(ngModel)]="search.sex">
+      <option [ngValue]="null"></option>
+      <option [ngValue]="Sex.female">Female</option>
+      <option [ngValue]="Sex.male">Male</option>
     </select>
   </div>
 
@@ -85,8 +94,13 @@
       id="searchHorseOwner"
       name="searchHorseOwner"
       textInputClass="form-control"
-      valueNeedsToMatchSuggestion="false">
+      valueNeedsToMatchSuggestion="false"
+      [suggestions]="ownerSuggestions"
+      [formatModel]="ownerToText"
+      [(ngModel)]="search.ownerName">
     </app-autocomplete>
+
+
   </div>
 </form>
 
@@ -123,6 +137,14 @@
                  aria-label="Edit horse">
                 <i class="bi bi-pencil"></i>
               </a>
+
+              <!-- Tree / Pedigree -->
+              <a class="btn btn-sm btn-outline-success"
+                 [routerLink]="['/horses', horse.id, 'tree']"
+                 aria-label="Show pedigree">
+                <i class="bi bi-diagram-3"></i>
+              </a>
+
 
               <!-- Delete -->
               <button class="btn btn-sm responsive-danger-button"

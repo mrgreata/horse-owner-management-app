@@ -30,40 +30,42 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.junit.jupiter.api.BeforeEach;
 
 
-
-@ActiveProfiles({"test", "datagen"})
+@ActiveProfiles("test")
 @SpringBootTest
-@EnableWebMvc
-@WebAppConfiguration
+@AutoConfigureMockMvc
 class HorseEndpointTest {
 
-  @Autowired private WebApplicationContext ctx;
+  @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private JdbcTemplate jdbc;
 
-  private MockMvc mockMvc;
 
   @BeforeEach
-  void setup() {
-    mockMvc = MockMvcBuilders.webAppContextSetup(ctx).build();
+  void clean() {
+    jdbc.update("DELETE FROM horse");
+    jdbc.update("DELETE FROM owner");
   }
 
   // --- US1: Liste ---
   @Test
   void gettingAllHorses() throws Exception {
+    long o1 = insertOwner("Wendy", "Darling");
+    createHorse("Shadowfax", "2005-05-05", "MALE", o1);
+    createHorse("Evenstar",  "2011-11-11", "FEMALE", null);
+
     var body = mockMvc.perform(get("/horses").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andReturn().getResponse().getContentAsByteArray();
 
-    List<HorseListDto> list = objectMapper.readerFor(HorseListDto.class)
-            .<HorseListDto>readValues(body).readAll();
+    List<HorseListDto> list = objectMapper.readValue(
+            body, objectMapper.getTypeFactory().constructCollectionType(List.class, HorseListDto.class));
 
-    assertThat(list)
-            .hasSizeGreaterThanOrEqualTo(1)
-            .extracting(HorseListDto::id, HorseListDto::name)
-        .contains(tuple(-1L, "Wendy"));
+    assertThat(list).extracting(HorseListDto::name)
+            .containsExactlyInAnyOrder("Shadowfax", "Evenstar");
   }
 
   // --- US1: Create 201 ---
@@ -248,6 +250,66 @@ class HorseEndpointTest {
     return id.longValue();
 
   }
+
+  // ------ US6 ------
+
+  @Test
+  void search_withoutParams_returnsAll() throws Exception {
+    long o = insertOwner("Lara", "Croft");
+    createHorse("Shadowfax", "2005-05-05", "MALE", o);
+    createHorse("Evenstar",  "2011-11-11", "FEMALE", null);
+
+    var res = mockMvc.perform(get("/horses").accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    List<HorseListDto> list = objectMapper.readValue(
+            res.getResponse().getContentAsByteArray(),
+            objectMapper.getTypeFactory().constructCollectionType(List.class, HorseListDto.class));
+
+    assertThat(list).extracting(HorseListDto::name)
+            .containsExactlyInAnyOrder("Shadowfax", "Evenstar");
+  }
+
+  @Test
+  void search_byOwnerNameSexBornBefore_returnsFiltered() throws Exception {
+    long o1 = insertOwner("Nathan", "Drake");
+    long o2 = insertOwner("Other", "Owner");
+    createHorse("Evenstar",  "2011-11-11", "FEMALE", o1);
+    createHorse("Shadowfax", "2020-01-01", "MALE",   o2);
+
+    var res = mockMvc.perform(get("/horses")
+                    .param("ownerName", "Nathan")
+                    .param("sex", "FEMALE")
+                    .param("bornBefore", "2015-01-01")
+                    .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    List<HorseListDto> list = objectMapper.readValue(
+            res.getResponse().getContentAsByteArray(),
+            objectMapper.getTypeFactory().constructCollectionType(List.class, HorseListDto.class));
+
+    assertThat(list).extracting(HorseListDto::name).containsExactly("Evenstar");
+  }
+
+  @Test
+  void search_nameLike_noMatch_returnsEmptyList() throws Exception {
+    createHorse("Comet", "2018-01-01", "MALE", null);
+
+    var res = mockMvc.perform(get("/horses")
+                    .param("name", "ZZZ")
+                    .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    List<HorseListDto> list = objectMapper.readValue(
+            res.getResponse().getContentAsByteArray(),
+            objectMapper.getTypeFactory().constructCollectionType(List.class, HorseListDto.class));
+
+    assertThat(list).isEmpty();
+  }
+
 
 
 
