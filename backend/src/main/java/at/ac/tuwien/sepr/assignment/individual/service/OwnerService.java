@@ -1,8 +1,11 @@
 package at.ac.tuwien.sepr.assignment.individual.service;
 
+import at.ac.tuwien.sepr.assignment.individual.dto.OwnerCreateDto;
 import at.ac.tuwien.sepr.assignment.individual.dto.OwnerDto;
 import at.ac.tuwien.sepr.assignment.individual.dto.OwnerSearchDto;
 import at.ac.tuwien.sepr.assignment.individual.exception.NotFoundException;
+import at.ac.tuwien.sepr.assignment.individual.exception.ValidationException;
+
 import java.util.Collection;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -33,7 +36,7 @@ public interface OwnerService {
    * Search for owners matching the criteria in {@code searchParameters}.
    *
    * <p>
-   * A owner is considered matched, if its name contains {@code searchParameters.name} as a substring.
+   * An owner is considered matched, if its name contains {@code searchParameters.name} as a substring.
    * The returned stream of owners never contains more than {@code searchParameters.maxAmount} elements,
    * even if there would be more matches in the persistent data store.
    * </p>
@@ -42,6 +45,16 @@ public interface OwnerService {
    * @return a stream containing owners matching the criteria in {@code searchParameters}
    */
   Stream<OwnerDto> search(OwnerSearchDto searchParameters);
+
+  /**
+   * Create a new owner.
+   * Required: {@code firstName}, {@code lastName}. Optional: {@code email} (validated if present).
+   *
+   * @param toCreate data of the owner to create
+   * @return the created owner including its generated {@code id}
+   * @throws ValidationException if required fields are missing or invalid (e.g., malformed email)
+   */
+  OwnerDto create(OwnerCreateDto toCreate) throws ValidationException;
 
 
 }

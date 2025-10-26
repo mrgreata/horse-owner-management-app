@@ -47,13 +47,14 @@ export class HorseService {
     return this.http.delete<void>(`${baseUri}/${id}`);
   }
 
-  /** Normalisiert Datum + Owner (first/last -> name) */
+  /** Normalisiert Datum + Owner (first/last statt name) */
   private fixHorse = (raw: any): Horse => {
     const owner = raw.owner
       ? {
         id: raw.owner.id,
-        name: raw.owner.name ?? [raw.owner.firstName, raw.owner.lastName].filter(Boolean).join(' '),
-        email: raw.owner.email
+        firstName: raw.owner.firstName,
+        lastName:  raw.owner.lastName,
+        email:     raw.owner.email ?? null
       }
       : null;
 
@@ -63,4 +64,5 @@ export class HorseService {
       dateOfBirth: new Date(raw.dateOfBirth as string)
     } as Horse;
   };
+
 }

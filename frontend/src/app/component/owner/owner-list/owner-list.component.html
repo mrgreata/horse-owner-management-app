@@ -1,0 +1,37 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="display-1 m-0">Owners</h1>
+  <a class="btn btn-primary" routerLink="/owners/create">Create Owner</a>
+</div>
+
+<div *ngIf="loading" class="alert alert-info">Loading owners…</div>
+<div *ngIf="!loading && owners.length === 0" class="alert alert-secondary">
+  No owners found.
+</div>
+
+<table *ngIf="!loading && owners.length > 0" class="table table-hover align-middle">
+  <thead>
+  <tr>
+    <th scope="col">Name</th>
+    <th scope="col">Email</th>
+    <th scope="col" class="text-end">Actions</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr *ngFor="let o of owners">
+    <td>{{ o.firstName }} {{ o.lastName }}</td>
+    <td>
+      <ng-container *ngIf="o.email; else noEmail">{{ o.email }}</ng-container>
+      <ng-template #noEmail><span class="text-muted">—</span></ng-template>
+    </td>
+    <td class="text-end">
+      <!-- Platzhalter für spätere Aktionen (Details/Edit), sorgt für konsistentes Layout -->
+      <button class="btn btn-sm btn-outline-secondary" disabled>Details</button>
+    </td>
+  </tr>
+  </tbody>
+
+  <!-- owner-list.component.html -->
+  <div *ngIf="!loading && owners.length === 0" class="text-muted">
+    No owners yet.
+  </div>
+</table>

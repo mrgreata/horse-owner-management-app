@@ -1,12 +1,9 @@
 package at.ac.tuwien.sepr.assignment.individual.entity;
 
-/**
- * Represents an owner in the persistent data store.
- */
+/** Immutable Owner-Entity. */
 public record Owner(
-    Long id,
-    String firstName,
-    String lastName,
-    String email
-) {
-}
+        Long id,
+        String firstName,
+        String lastName,
+        String email
+) {}

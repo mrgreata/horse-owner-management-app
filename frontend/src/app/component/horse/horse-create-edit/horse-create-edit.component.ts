@@ -15,10 +15,7 @@ import { ConfirmDeleteDialogComponent } from 'src/app/component/confirm-delete-d
 //import {Horse} from 'src/app/dto/horse';
 import { CommonModule } from '@angular/common';
 import { Horse } from 'src/app/dto/horse';
-
-
-
-
+import { OwnerDto, fullName } from 'src/app/dto/owner';
 
 
 
@@ -54,7 +51,7 @@ export class HorseCreateEditComponent implements OnInit {
     description: '',
     dateOfBirth: new Date(),
     sex: Sex.female,
-    owner: null as Owner | null,
+    owner: null as OwnerDto | null, // ⬅️
   };
   horseBirthDateIsSet = false;
 
@@ -134,8 +131,8 @@ export class HorseCreateEditComponent implements OnInit {
     }
   }
 */
-  ownerSuggestions = (input: string): Observable<Owner[]> =>
-    input.trim() === '' ? of([]) : this.ownerService.searchByName(input, 5);
+  ownerSuggestions = (input: string): Observable<OwnerDto[]> =>
+    input.trim() === '' ? of([]) : this.ownerService.search(input, 5);
 
 // Wrapper nur fürs Template, damit die Template-Typprüfung zufrieden ist:
   readonly ownerSuggestionsForAuto =
@@ -253,14 +250,16 @@ export class HorseCreateEditComponent implements OnInit {
   }
 
 
-  public formatOwnerName(owner: Owner | null | undefined): string {
-    return owner?.name ?? '';
+  public formatOwnerName(owner: OwnerDto | null | undefined): string {
+    return owner ? fullName(owner) : '';
   }
-  readonly ownerFormatter = (o: Owner | null | undefined) => this.formatOwnerName(o);
+  readonly ownerFormatter = (o: OwnerDto | null | undefined) => this.formatOwnerName(o);
 
-  onOwnerSelected(owner: Owner | null) {
+
+  onOwnerSelected(owner: OwnerDto | null) {
     this.horse.owner = owner;
   }
+
 
 
   public deleteFromEdit(): void {

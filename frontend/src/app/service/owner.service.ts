@@ -1,8 +1,10 @@
+// src/app/service/owner.service.ts
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { map, Observable } from 'rxjs';            // 👈 map importieren
+import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
-import { Owner } from '../dto/owner';
+import { OwnerCreateDto, OwnerDto } from '../dto/owner';
+
 
 const baseUri = environment.backendUrl + '/owners';
 
@@ -10,27 +12,37 @@ const baseUri = environment.backendUrl + '/owners';
 export class OwnerService {
   constructor(private http: HttpClient) {}
 
-  searchByName(name: string, limit: number): Observable<Owner[]> {
-    const params = new HttpParams()
-      .set('name', name)
-      .set('limit', String(limit));
-
-    return this.http.get<any[]>(baseUri, { params }).pipe(
-      map(rows => rows.map(o => ({
-        id: o.id,
-        name: [o.firstName, o.lastName].filter(Boolean).join(' '),  // 👈 hier bauen wir name
-        email: o.email
-      } as Owner)))
-    );
+  /** Suche nach Namen (Teilstring); maxAmount begrenzt die Anzahl; beides optional. */
+  search(name?: string, maxAmount?: number): Observable<OwnerDto[]> {
+    let params = new HttpParams();
+    if (name != null && name !== '') { params = params.set('name', name); }
+    if (maxAmount != null) { params = params.set('maxAmount', String(maxAmount)); }
+    return this.http.get<OwnerDto[]>(baseUri, { params });
   }
 
-  getById(id: number): Observable<Owner> {
-    return this.http.get<any>(`${baseUri}/${id}`).pipe(
-      map(o => ({
-        id: o.id,
-        name: [o.firstName, o.lastName].filter(Boolean).join(' '),  // 👈 ebenso hier
-        email: o.email
-      } as Owner))
-    );
+  /** Alle holen (einfach die Suche ohne Parameter) */
+  getAll(): Observable<OwnerDto[]> {
+    return this.http.get<OwnerDto[]>(baseUri);
   }
+
+  /** Owner anlegen – leere Email wird als null gesendet. */
+  create(dto: OwnerCreateDto) {
+    const payload: OwnerCreateDto = {
+      firstName: (dto.firstName ?? '').trim(),
+      lastName:  (dto.lastName  ?? '').trim(),
+      email: dto.email?.trim() ? dto.email.trim() : null
+    };
+    return this.http.post<OwnerDto>(baseUri, payload);
+  }
+
+
+  listAll() {
+    return this.http.get<OwnerDto[]>(baseUri);
+  }
+
+  // Kompatibilitäts-Methode für alten Aufruf
+  searchByName(name: string, limit: number) {
+    return this.search(name, limit);
+  }
+
 }

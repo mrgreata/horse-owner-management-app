@@ -1,4 +1,4 @@
-import {Owner} from './owner';
+import { OwnerDto } from './owner';
 import {Sex} from './sex';
 
 export interface Horse {
@@ -7,7 +7,7 @@ export interface Horse {
   description?: string;
   dateOfBirth: Date;
   sex: Sex;
-  owner?: Owner | null;
+  owner?: OwnerDto | null;
 
   // NEU für US4
   motherId?: number | null;

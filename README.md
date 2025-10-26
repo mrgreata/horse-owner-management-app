@@ -13,4 +13,7 @@
 | 2025-10-23  | 2 h   | US4   | HorseService + REST + Frontend angepasst (Form + Autocomplete) |
 | 2025-10-23  | 1.5 h | US4   | Tests + manuelle Prüfung der Elternlogik (Validierung, UI) |
 | 2025-10-24  | 3 h   | US5   | Detailansicht implementiert (Frontend-Routing, Component, Template, Owner-Mapping) |
-| **Summe**   | **21.5 h** |     |                                                    |
+| 2025-10-24  | 2.5 h | US6   | Backend: HorseSearchDto + Endpoint erweitert, DAO + Service angepasst |
+| 2025-10-25  | 3 h   | US6   | Frontend: Filterformular, Binding, Autocomplete (Owner), Service-Integration |
+| 2025-10-25  | 1.5 h | US6   | Tests + Bugfixes (DatePipe, Enum Sex, Binding, Routing) |
+| **Summe**   | **28.5 h** |     |                                                    |

@@ -16,10 +16,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import at.ac.tuwien.sepr.assignment.individual.dto.OwnerCreateDto;
+import at.ac.tuwien.sepr.assignment.individual.exception.ValidationException;
+import at.ac.tuwien.sepr.assignment.individual.entity.Owner;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.transaction.annotation.Transactional;
+
+
+
 /**
  * Service implementation for managing owner-related operations.
  */
 @Service
+@Transactional(readOnly = true)
 public class OwnerServiceImpl implements OwnerService {
   private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
@@ -80,5 +92,59 @@ public class OwnerServiceImpl implements OwnerService {
     return dao.search(searchParameters).stream()
         .map(mapper::entityToDto);
   }
+
+  @Override
+  @Transactional(readOnly = false)
+  public OwnerDto create(OwnerCreateDto toCreate) throws ValidationException {
+    LOG.info("OwnerService.create({})", toCreate);
+
+    var errors = new ArrayList<String>();
+    if (toCreate == null) {
+      throw new ValidationException("Request body invalid", List.of("request body must not be null"));
+    }
+
+    String first = toCreate.firstName() == null ? null : toCreate.firstName().trim();
+    String last  = toCreate.lastName()  == null ? null : toCreate.lastName().trim();
+
+    if (first == null || first.isEmpty()) {
+      errors.add("firstName must not be empty");
+    }
+    if (last == null || last.isEmpty()) {
+      errors.add("lastName must not be empty");
+    }
+    if (first != null && first.length() > 255) {
+      errors.add("firstName too long (max 255)");
+    }
+    if (last != null && last.length() > 255) {
+      errors.add("lastName too long (max 255)");
+    }
+
+    // email erst hier deklarieren -> keine 'VariableDeclarationUsageDistance'
+    String email = toCreate.email();
+    if (email != null && !email.isBlank()) {
+      email = email.trim();
+      if (email.length() > 255) {
+        errors.add("email too long (max 255)");
+      } else {
+        if (!email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+          errors.add("email has invalid format");
+        }
+      }
+    }
+
+    if (!errors.isEmpty()) {
+      LOG.warn("Validation failed when creating owner: {}", errors);
+      throw new ValidationException("Owner data invalid", errors);
+    }
+
+    // normalisierte Werte weiterverwenden
+    var normalized = new OwnerCreateDto(first, last, (email == null ? null : email));
+    var entity = mapper.fromCreateDto(normalized);
+    var created = dao.create(entity);
+    return mapper.entityToDto(created);
+
+
+  }
+
 
 }

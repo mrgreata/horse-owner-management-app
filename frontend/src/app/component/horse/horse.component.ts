@@ -5,7 +5,7 @@ import { ToastrService } from 'ngx-toastr';
 import { AutocompleteComponent } from 'src/app/component/autocomplete/autocomplete.component';
 import { HorseService } from 'src/app/service/horse.service';
 import { Horse } from 'src/app/dto/horse';
-import { Owner } from 'src/app/dto/owner';
+import {OwnerDto, fullName, Owner} from 'src/app/dto/owner';
 import { ConfirmDeleteDialogComponent } from 'src/app/component/confirm-delete-dialog/confirm-delete-dialog.component';
 import { Sex } from 'src/app/dto/sex';
 import { DatePipe } from '@angular/common';
@@ -122,7 +122,7 @@ export class HorseComponent implements OnInit {
   }
 
   ownerName(owner: Owner | null | undefined): string {
-    return owner?.name?.trim() || '';
+    return owner ? fullName(owner) : '';
   }
 
   dateOfBirthAsLocaleDate(horse: Horse): string {
@@ -150,7 +150,7 @@ export class HorseComponent implements OnInit {
     this.service.search({ ownerName: q, limit: 8 }).pipe(
       map(hs => {
         const names = hs
-          .map(h => h.owner?.name ?? '')
+          .map(h => h.owner ? fullName(h.owner) : '')
           .filter(n => n);
         // eindeutige Namen
         return Array.from(new Set(names));

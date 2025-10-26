@@ -16,6 +16,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;   // <-- fehlt so
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+
+/**
+ * Translates backend Exceptions to HTTP responses with proper status codes and payloads.
+ * Logs each exception exactly once at an appropriate level (TS 10).
+ */
 @RestControllerAdvice
 public class ApplicationExceptionHandler {
   private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
