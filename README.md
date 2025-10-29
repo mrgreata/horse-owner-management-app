@@ -50,7 +50,7 @@
 ```bash
 cd backend
 mvn clean package
-mvn spring-boot:run -Dspring-boot.run.profiles=Datagen
+mvn spring-boot:run -Dspring-boot.run.profiles=datagen
 
 
 cd frontend

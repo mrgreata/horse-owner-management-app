@@ -13,8 +13,9 @@
             name="firstName"
             class="form-control"
             [(ngModel)]="model.firstName"
+            #firstNameCtrl="ngModel"
             required>
-          <div class="invalid-feedback d-block" *ngIf="f.submitted && !model.firstName">
+          <div class="invalid-feedback d-block" *ngIf="(f.submitted || firstNameCtrl.touched) && firstNameCtrl.invalid">
             First name is required
           </div>
         </div>
@@ -32,8 +33,9 @@
             name="lastName"
             class="form-control"
             [(ngModel)]="model.lastName"
+            #lastNameCtrl="ngModel"
             required>
-          <div class="invalid-feedback d-block" *ngIf="f.submitted && !model.lastName">
+          <div class="invalid-feedback d-block" *ngIf="(f.submitted || lastNameCtrl.touched) && lastNameCtrl.invalid">
             Last name is required
           </div>
         </div>
