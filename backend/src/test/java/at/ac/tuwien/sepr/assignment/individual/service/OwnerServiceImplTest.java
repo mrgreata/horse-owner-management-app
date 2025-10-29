@@ -51,4 +51,41 @@ class OwnerServiceImplTest {
     assertThat(res).isNotNull();
     assertThat(res.limit(5).toList().size()).isLessThanOrEqualTo(5);
   }
+
+  @Test
+  void create_blankEmail_normalizedToNull() throws Exception {
+    var dto = new OwnerCreateDto("Eva", "Gray", "   ");
+    OwnerDto created = service.create(dto);
+    assertThat(created.email()).isNull();
+  }
+
+
+  @Test
+  void create_firstOrLastNameTooLong_throwsValidation() {
+    String long256 = "x".repeat(256);
+    assertThatThrownBy(() -> service.create(new OwnerCreateDto(long256, "Ok", null)))
+            .isInstanceOf(ValidationException.class)
+            .hasMessageContaining("firstName too long");
+    assertThatThrownBy(() -> service.create(new OwnerCreateDto("Ok", long256, null)))
+            .isInstanceOf(ValidationException.class)
+            .hasMessageContaining("lastName too long");
+  }
+  @Test
+  void getById_unknown_throwsNotFound() {
+    assertThatThrownBy(() -> service.getById(9_999_999L))
+            .isInstanceOf(at.ac.tuwien.sepr.assignment.individual.exception.NotFoundException.class);
+  }
+  @Test
+  void getAllById_missingOne_throwsNotFound() {
+    try {
+      var created = service.create(new OwnerCreateDto("Ann", "Smith", null));
+      var ids = java.util.List.of(created.id(), 42_4242L);
+      assertThatThrownBy(() -> service.getAllById(ids))
+              .isInstanceOf(at.ac.tuwien.sepr.assignment.individual.exception.NotFoundException.class);
+    } catch (ValidationException e) {
+      org.junit.jupiter.api.Assertions.fail("Setup should be valid but threw ValidationException", e);
+    }
+  }
+
+
 }

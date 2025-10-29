@@ -13,7 +13,7 @@
   <tr>
     <th scope="col">Name</th>
     <th scope="col">Email</th>
-    <th scope="col" class="text-end">Actions</th>
+
   </tr>
   </thead>
   <tbody>
@@ -22,10 +22,6 @@
     <td>
       <ng-container *ngIf="o.email; else noEmail">{{ o.email }}</ng-container>
       <ng-template #noEmail><span class="text-muted">—</span></ng-template>
-    </td>
-    <td class="text-end">
-      <!-- Platzhalter für spätere Aktionen (Details/Edit), sorgt für konsistentes Layout -->
-      <button class="btn btn-sm btn-outline-secondary" disabled>Details</button>
     </td>
   </tr>
   </tbody>

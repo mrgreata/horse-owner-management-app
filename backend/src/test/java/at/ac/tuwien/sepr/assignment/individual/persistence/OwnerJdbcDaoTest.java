@@ -57,4 +57,38 @@ class OwnerJdbcDaoTest {
     var owners = dao.getAllById(ids);
     assertThat(owners).extracting(Owner::id).doesNotContain(42_4242L);
   }
+
+  @Test
+  void search_name_isCaseInsensitive() {
+    dao.create(new Owner(null, "Ann", "Smith", null));
+    dao.create(new Owner(null, "bob", "FOX", null));
+    var res = dao.search(new OwnerSearchDto("an", 10));
+    assertThat(res).extracting(Owner::firstName).contains("Ann");
+  }
+
+  @Test
+  void search_withoutParams_returnsSome() {
+    dao.create(new Owner(null, "Jane", "Doe", null));
+    dao.create(new Owner(null, "John", "Doe", null));
+    var res = dao.search(new OwnerSearchDto(null, null));
+    assertThat(res.size()).isGreaterThanOrEqualTo(2);
+  }
+
+  @Test
+  void create_emailBlank_isStoredNull_andTrimmed() throws Exception {
+    var created1 = dao.create(new Owner(null, "Eva", "Gray", "  "));
+    assertThat(created1.email()).isNull();
+
+    var created2 = dao.create(new Owner(null, "Max", "Payne", "  max@test.tld  "));
+    var re = dao.getById(created2.id());
+    assertThat(re.email()).isEqualTo("max@test.tld");
+  }
+
+  @Test
+  void getAllById_emptyInput_returnsEmpty() {
+    assertThat(dao.getAllById(List.of())).isEmpty();
+  }
+
+
+
 }

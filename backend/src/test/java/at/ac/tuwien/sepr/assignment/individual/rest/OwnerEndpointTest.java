@@ -34,22 +34,24 @@ class OwnerEndpointTest {
     ObjectMapper om;
 
   @Test
-    void postOwners_valid_returns201WithLocationAndBody() throws Exception {
+  void postOwners_valid_returns201WithLocationAndBody() throws Exception {
     var dto = new OwnerCreateDto("Nina", "Kern", "nina.kern@test.tld");
-    var res = mvc.perform(post("/owners")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(om.writeValueAsString(dto)))
-                .andExpect(status().isCreated())
-                .andExpect(header().string("Location", org.hamcrest.Matchers.matchesPattern("/owners/\\d+")))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andReturn();
 
-    String body = res.getResponse().getContentAsString();
+    var res = mvc.perform(post("/owners")
+                    .contentType(MediaType.APPLICATION_JSON) // <-- Request content type
+                    .content(om.writeValueAsString(dto)))
+            .andExpect(status().isCreated())
+            .andExpect(header().string("Location", org.hamcrest.Matchers.matchesPattern(".*/owners/\\d+"))) // robuster
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON)) // <-- Response assertion
+            .andReturn();
+
+    var body = res.getResponse().getContentAsString();
     var created = om.readTree(body);
     assertThat(created.get("id").asLong()).isPositive();
     assertThat(created.get("firstName").asText()).isEqualTo("Nina");
     assertThat(created.get("lastName").asText()).isEqualTo("Kern");
   }
+
 
   @Test
     void postOwners_missingLastName_returns422() throws Exception {
@@ -138,6 +140,14 @@ class OwnerEndpointTest {
                     .content(brokenJson))
             .andExpect(status().isBadRequest());
   }
+
+  @Test
+  void getOwners_withoutParams_returns200JsonArray() throws Exception {
+    mvc.perform(get("/owners"))
+            .andExpect(status().isOk())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+  }
+
 
 
 

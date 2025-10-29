@@ -1,25 +1,4 @@
-<!-- SANITY CHECK BANNER
-    This is just for checking, that your setup works.
-    You can – and should – remove this later
--->
 
-@if (bannerError) {
-  <div class="container mt-3 mb-3">
-    <div class="alert alert-danger" role="alert">
-      <h4>Error!</h4> {{ bannerError }}
-      <p>Could not load horses.</p>
-      <p>Something is not quite right. Did you start the backend?</p>
-    </div>
-  </div>
-} @else if (horses) {
-  <div class="container mt-3">
-    <div class="alert alert-success" role="alert">
-      <h4 class="alert-heading">Well done!</h4>
-      <p>Your application is up and running.</p>
-      <p>You should see the current list of horses below.</p>
-    </div>
-  </div>
-}
 
 <!-- END SANITY CHECK BANNER -->
 

@@ -293,7 +293,13 @@ public class HorseJdbcDao implements HorseDao {
 
     sql.append(" ORDER BY h.name ASC");
 
+    if (searchCriteria.limit() != null && searchCriteria.limit() > 0) {
+      sql.append(" LIMIT ?");
+      params.add(searchCriteria.limit());
+    }
+
     return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> mapRow(rs, rowNum), params.toArray());
+
   }
 
 

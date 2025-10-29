@@ -119,14 +119,16 @@ public class OwnerServiceImpl implements OwnerService {
       errors.add("lastName too long (max 255)");
     }
 
-    // email erst hier deklarieren -> keine 'VariableDeclarationUsageDistance'
+
     String email = toCreate.email();
-    if (email != null && !email.isBlank()) {
+    if (email != null) {
       email = email.trim();
-      if (email.length() > 255) {
-        errors.add("email too long (max 255)");
+      if (email.isEmpty()) {
+        email = null;
       } else {
-        if (!email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+        if (email.length() > 255) {
+          errors.add("email too long (max 255)");
+        } else if (!email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
           errors.add("email has invalid format");
         }
       }
@@ -137,14 +139,12 @@ public class OwnerServiceImpl implements OwnerService {
       throw new ValidationException("Owner data invalid", errors);
     }
 
-    // normalisierte Werte weiterverwenden
-    var normalized = new OwnerCreateDto(first, last, (email == null ? null : email));
+    var normalized = new OwnerCreateDto(first, last, email);
     var entity = mapper.fromCreateDto(normalized);
     var created = dao.create(entity);
     return mapper.entityToDto(created);
-
-
   }
+
 
 
 }

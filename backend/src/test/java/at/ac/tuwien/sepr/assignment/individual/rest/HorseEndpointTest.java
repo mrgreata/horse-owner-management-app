@@ -31,8 +31,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.junit.jupiter.api.BeforeEach;
-
 
 @ActiveProfiles("test")
 @SpringBootTest
@@ -150,6 +148,27 @@ class HorseEndpointTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.owner").doesNotExist());
   }
+
+
+
+  @Test
+  void createHorse_returns201_setsLocationHeader_andJsonContentType() throws Exception {
+    long ownerId = insertOwner("Alex", "Miller");
+    String body = """
+    {"name":"Bucephalus","description":"The legendary one",
+     "dateOfBirth":"2000-01-01","sex":"MALE","ownerId":%d}
+        """.formatted(ownerId);
+
+    mockMvc.perform(post("/horses")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body))
+            .andExpect(status().isCreated())
+            .andExpect(header().exists("Location"))
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON)) // ← robust
+            .andExpect(jsonPath("$.id").isNumber());
+  }
+
+
 
   // --- US2: Delete ---
   @Test
@@ -309,6 +328,66 @@ class HorseEndpointTest {
 
     assertThat(list).isEmpty();
   }
+
+  @Test
+  void getById_returnsHorseWithAllFields() throws Exception {
+    long o = insertOwner("Ann", "Smith");
+    long id = createHorse("Shadowfax", "2005-05-05", "MALE", o);
+
+    mockMvc.perform(get("/horses/{id}", id).accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(id))
+            .andExpect(jsonPath("$.name").value("Shadowfax"))
+            .andExpect(jsonPath("$.sex").value("MALE"))
+            .andExpect(jsonPath("$.owner.id").value(o));
+  }
+
+  @Test
+  void delete_nonExisting_returns404() throws Exception {
+    mockMvc.perform(delete("/horses/{id}", 999999))
+            .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void update_invalid_returns422_withErrors() throws Exception {
+    long id = createHorse("Amy", "2015-05-10", "FEMALE", null);
+    var payload = """
+    {"name":"","dateOfBirth":"2099-01-01","sex":null,"ownerId":null}
+        """;
+
+    var res = mockMvc.perform(put("/horses/{id}", id)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(payload))
+            .andExpect(status().isUnprocessableEntity())
+            .andReturn();
+
+    var node = objectMapper.readTree(res.getResponse().getContentAsByteArray());
+    assertThat(node.get("message").asText()).isEqualTo("Invalid horse");
+    assertThat(node.get("errors").toString())
+            .contains("name must not be empty")
+            .contains("sex must not be null")
+            .contains("dateOfBirth must not be in the future");
+  }
+
+
+  @Test
+  void search_withLimit_returnsAtMostThatMany() throws Exception {
+    createHorse("A", "2010-01-01", "FEMALE", null);
+    createHorse("B", "2010-01-01", "FEMALE", null);
+    createHorse("C", "2010-01-01", "FEMALE", null);
+
+    var body = mockMvc.perform(get("/horses").param("limit", "2"))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsByteArray();
+
+    List<HorseListDto> list = objectMapper.readValue(
+            body, objectMapper.getTypeFactory().constructCollectionType(List.class, HorseListDto.class));
+    assertThat(list).hasSizeLessThanOrEqualTo(2);
+  }
+
+
+
+
 
 
 

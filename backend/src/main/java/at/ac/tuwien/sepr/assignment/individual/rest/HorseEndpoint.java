@@ -28,6 +28,10 @@ import at.ac.tuwien.sepr.assignment.individual.exception.ConflictException;
 
 import org.springframework.web.bind.annotation.ModelAttribute;
 
+import java.net.URI;
+import org.springframework.http.ResponseEntity;
+
+
 
 @RestController
 @RequestMapping(path = HorseEndpoint.BASE_PATH, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -76,13 +80,20 @@ public class HorseEndpoint {
   }
 
   @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-  @ResponseStatus(HttpStatus.CREATED)
-  public HorseDetailDto create(@RequestBody HorseCreateDto toCreate)
+  public ResponseEntity<HorseDetailDto> create(@RequestBody HorseCreateDto toCreate)
           throws ValidationException, ConflictException, NotFoundException {
     LOG.info("POST {}", BASE_PATH);
     LOG.debug("Body of request:\n{}", toCreate);
-    return service.create(toCreate);
+
+    HorseDetailDto created = service.create(toCreate);
+    URI location = URI.create(BASE_PATH + "/" + created.id());
+
+    return ResponseEntity
+            .created(location)                // 201 + Location
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(created);
   }
+
 
 
   @DeleteMapping("{id}")

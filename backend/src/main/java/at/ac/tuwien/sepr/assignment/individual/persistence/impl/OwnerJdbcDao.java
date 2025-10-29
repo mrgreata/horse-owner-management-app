@@ -105,15 +105,25 @@ public class OwnerJdbcDao implements OwnerDao {
     LOG.debug("DAO create owner: {}", owner);
     final String sql = "INSERT INTO owner (first_name, last_name, email) VALUES (?, ?, ?)";
 
+    // E-Mail normieren: trimmen, leere Strings -> null
+    String e = owner.email();
+    if (e != null) {
+      e = e.trim();
+      if (e.isEmpty()) {
+        e = null;
+      }
+    }
+    final String normalizedEmail = e; // <- effektiv final für Lambda
+
     KeyHolder keyHolder = new GeneratedKeyHolder();
     jdbcTemplate.update(con -> {
       var ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
       ps.setString(1, owner.firstName());
       ps.setString(2, owner.lastName());
-      if (owner.email() == null || owner.email().isBlank()) {
+      if (normalizedEmail == null) {
         ps.setNull(3, Types.VARCHAR);
       } else {
-        ps.setString(3, owner.email().trim());
+        ps.setString(3, normalizedEmail);
       }
       return ps;
     }, keyHolder);
@@ -123,9 +133,11 @@ public class OwnerJdbcDao implements OwnerDao {
       throw new FatalException("Failed to retrieve generated id for owner");
     }
 
-    // neuen Record mit generierter ID zurückgeben
-    return new Owner(key.longValue(), owner.firstName(), owner.lastName(), owner.email());
+    return new Owner(key.longValue(), owner.firstName(), owner.lastName(), normalizedEmail);
   }
+
+
+
 
 
 

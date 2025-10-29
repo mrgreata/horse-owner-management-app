@@ -8,7 +8,7 @@ logging:
   logback:
     rollingpolicy:
       # tägliche Rotation + Größen-Rollover; Spring Boot nutzt SizeAndTimeBasedRollingPolicy bei %d und %i
-      file-name-pattern: ./logs/wendys-family-tree-%d{yyyy-MM-dd}.%i.log
+      file-name-pattern: ./logs/wendys-family-tree-%d{yyyy-MM-dd}.%i.log.gz
       max-file-size: 10MB
       max-history: 14
       total-size-cap: 200MB
