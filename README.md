@@ -23,6 +23,7 @@
 | 2025-10-24  | 2.5 h | US6   | Backend: HorseSearchDto + Endpoint erweitert, DAO + Service angepasst |
 | 2025-10-25  | 3 h   | US6   | Frontend: Filterformular, Binding, Autocomplete (Owner), Service-Integration |
 | 2025-10-25  | 1.5 h | US6   | Tests + Bugfixes (DatePipe, Enum Sex, Binding, Routing) |
+| 2025-10-26  | 3 h   | US7   | Owner-Verwaltung implementiert (Backend + Frontend, Toastr, Cancel-Button, Styling) |
 | 2025-10-27  | 1.5 h | US8   | Owner-Liste (Anzeige aller Besitzer:innen) umgesetzt, Styling an Pferdeliste angepasst |
 | **Summe**   | **33 h** |     |               |
 
