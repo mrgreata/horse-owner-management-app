@@ -1,7 +1,5 @@
 # Wendy’s Family Tree
 
-**Name:** Devid Marlon Greta  
-**Matrikelnummer:** e12223206
 
 ---
 
