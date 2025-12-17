@@ -3,8 +3,6 @@
 A full-stack web application for managing horses, their owners, and multi-generation pedigrees.  
 The system provides CRUD operations for horses and owners, advanced search, and a visual family tree view.
 
-This project was implemented as an individual assignment in the **Software Engineering Project (SE PR), Winter Term 2025** at TU Wien.
-
 ---
 
 ## 📚 Table of Contents
